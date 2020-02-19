@@ -1,0 +1,78 @@
+#include <stdio.h>
+#include <stdlib.h>
+
+#include "../include/simd_util.h"
+
+void consume_data(const void *data, const size_t len)
+{
+    /*
+     * Do nothing, but if this is linked as an external object
+     * or library, the optimizer cannot know that it does nothing
+     * so it forces the compiler to actually generate code to do
+     * what the program says... (this is useful for keeping
+     * benchmarks honest).
+     */
+}
+
+void _debug_print_vec(const void *data, const unsigned nlanes, const unsigned lanesize, const char *name, const unsigned long long mask)
+{
+    unsigned i, first=0;
+
+    switch (lanesize) {
+        case 1:
+        case 2:
+        case 4:
+        case 8:
+            break;
+        default:
+            return;
+    }
+    
+    if ((lanesize * nlanes) > sizeof(u64_8)) {
+        return;
+    }
+    
+    printf("%s = {", name);
+    for (i = 0; i < nlanes; i++) {
+        if (!((mask >> i) & 1)) { continue; }
+        const char *pfx = first ? " " : ", ";
+        first |= 1;
+        switch (lanesize) {
+            case 1:
+                printf("%s0x%02x", pfx, ((const unsigned char *)data)[i]);
+                break;
+            case 2:
+                printf("%s0x%04x", pfx, ((const unsigned short *)data)[i]);
+                break;
+            case 4:
+                printf("%s0x%08x", pfx, ((const unsigned int *)data)[i]);
+                break;
+            case 8:
+                printf("%s0x%016llx", pfx, ((const unsigned long long *)data)[i]);
+                break;
+            default:
+                break;
+        }
+    }
+    printf(" }\n");
+}
+
+
+#if STANDALONE_TEST
+
+int main(int argc, char **argv)
+{
+    const u64_8 foo_vec = {0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7};
+    const u64_8 bar_vec = TSC_SLOPPY() << foo_vec;
+
+    const unsigned n = VEC_LANES(bar_vec);
+    unsigned i;
+    printf("bar_vec = { ");
+    for (i = 0; i < n; i++) {
+        printf("[%2u] = 0x%016llx ", i, bar_vec[i]);
+    }
+    printf("}\n");
+    return 0;
+}
+
+#endif /* STANDALONE_TEST */
