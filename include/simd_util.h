@@ -12,3 +12,4 @@
 #define alignof(_x) __alignof__((_x))
 
 #include "base_util.h"
+#include "mask_util.h"

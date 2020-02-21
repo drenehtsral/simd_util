@@ -27,7 +27,7 @@ test_srcs = test/*.c
 base_objs = src/base_util.o
 
 
-all: base test
+all: base
 
 
 base: $(base_objs)

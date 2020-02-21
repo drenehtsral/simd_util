@@ -1,6 +1,6 @@
 
-#ifndef __SIMD_TYPES_H_
-#define __SIMD_TYPES_H_
+#ifndef _SIMD_TYPES_H_
+#define _SIMD_TYPES_H_
 
 #define _SIMD_TYPE_BY_LANE(_lane_type, _lane_count) _lane_type \
     __attribute__((__vector_size__(sizeof(_lane_type) * (_lane_count))))
