@@ -14,9 +14,15 @@ void consume_data(const void *data, const size_t len)
      */
 }
 
+/*
+ * This is a quick and dirty universal masked-vector-printing function,
+ * It is not intended to be particularly efficient or fancy, but for
+ * convenience it can be called using the debug_print_vec() macro
+ * defined in base_util.h
+ */
 void _debug_print_vec(const void *data, const unsigned nlanes, const unsigned lanesize, const char *name, const unsigned long long mask)
 {
-    unsigned i, first=0;
+    unsigned i, first=1;
 
     switch (lanesize) {
         case 1:
@@ -36,19 +42,19 @@ void _debug_print_vec(const void *data, const unsigned nlanes, const unsigned la
     for (i = 0; i < nlanes; i++) {
         if (!((mask >> i) & 1)) { continue; }
         const char *pfx = first ? " " : ", ";
-        first |= 1;
+        first = 0;
         switch (lanesize) {
             case 1:
-                printf("%s0x%02x", pfx, ((const unsigned char *)data)[i]);
+                printf("%s[%u]=0x%02x", pfx, i, ((const unsigned char *)data)[i]);
                 break;
             case 2:
-                printf("%s0x%04x", pfx, ((const unsigned short *)data)[i]);
+                printf("%s[%u]=0x%04x", pfx, i, ((const unsigned short *)data)[i]);
                 break;
             case 4:
-                printf("%s0x%08x", pfx, ((const unsigned int *)data)[i]);
+                printf("%s[%u]=0x%08x", pfx, i, ((const unsigned int *)data)[i]);
                 break;
             case 8:
-                printf("%s0x%016llx", pfx, ((const unsigned long long *)data)[i]);
+                printf("%s[%u]=0x%016llx", pfx, i, ((const unsigned long long *)data)[i]);
                 break;
             default:
                 break;

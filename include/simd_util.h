@@ -10,3 +10,5 @@
 #define VEC_TYPE_LANES(_typ) ({ typeof(_typ) _tmp; VEC_LANES(_tmp); })
 
 #define alignof(_x) __alignof__((_x))
+
+#include "base_util.h"
