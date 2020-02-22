@@ -14,6 +14,8 @@ void _debug_print_vec(const void *data, const unsigned nlanes,
     _debug_print_vec(&(__vec), _nl, _ls, #_vec, (_mask));	\
 }) /* end of macro */
 
-void consume_data(const void *data, const size_t len);
+void consume_data(const void * const RESTR data, const size_t len);
+int randomize_data(void * const RESTR data, const size_t len);
+
 
 #endif /* _BASE_UTIL_H_ */

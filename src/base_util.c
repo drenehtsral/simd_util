@@ -1,9 +1,15 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <sys/mman.h>
+#include <errno.h>
 
 #include "../include/simd_util.h"
 
-void consume_data(const void *data, const size_t len)
+void consume_data(const void * const RESTR data, const size_t len)
 {
     /*
      * Do nothing, but if this is linked as an external object
@@ -77,6 +83,39 @@ void _debug_print_vec(const void *data, const unsigned nlanes,
     printf(" }\n");
 }
 
+int randomize_data(void * const RESTR data, const size_t len)
+{
+    const unsigned max_chunk = (1 << 21);
+    char * RESTR trav = (char *)data;
+    size_t left = len;
+
+    int ret;
+    const int fd = open("/dev/urandom", O_RDONLY);
+
+    if (fd < 0) {
+        return -1;
+    }
+
+    while (left) {
+        const unsigned chunk = (left <= max_chunk) ? left : max_chunk;
+        ret = read(fd, trav, chunk);
+
+        if (ret <= 0) {
+            if ((errno == EINTR) & (ret < 0)) {
+                continue;
+            }
+
+            close(fd);
+            return -1;
+        }
+
+        trav += chunk;
+        left -= chunk;
+    }
+
+    close(fd);
+    return 0;
+}
 
 #if STANDALONE_TEST
 
