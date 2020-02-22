@@ -1,7 +1,9 @@
 #ifndef _BASE_UTIL_H_
 #define _BASE_UTIL_H_
 
-void _debug_print_vec(const void *data, const unsigned nlanes, const unsigned lanesize, const char *name, const unsigned long long mask);
+void _debug_print_vec(const void *data, const unsigned nlanes,
+                      const unsigned lanesize, const char *name,
+                      const unsigned long long mask);
 
 #define debug_print_vec(_vec, _mask)				\
 ({								\

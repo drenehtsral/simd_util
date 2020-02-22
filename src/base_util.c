@@ -20,9 +20,11 @@ void consume_data(const void *data, const size_t len)
  * convenience it can be called using the debug_print_vec() macro
  * defined in base_util.h
  */
-void _debug_print_vec(const void *data, const unsigned nlanes, const unsigned lanesize, const char *name, const unsigned long long mask)
+void _debug_print_vec(const void *data, const unsigned nlanes,
+                      const unsigned lanesize, const char *name,
+                      const unsigned long long mask)
 {
-    unsigned i, first=1;
+    unsigned i, first = 1;
 
     switch (lanesize) {
         case 1:
@@ -30,36 +32,48 @@ void _debug_print_vec(const void *data, const unsigned nlanes, const unsigned la
         case 4:
         case 8:
             break;
+
         default:
             return;
     }
-    
+
     if ((lanesize * nlanes) > sizeof(u64_8)) {
         return;
     }
-    
+
     printf("%s = {", name);
+
     for (i = 0; i < nlanes; i++) {
-        if (!((mask >> i) & 1)) { continue; }
+        if (!((mask >> i) & 1)) {
+            continue;
+        }
+
         const char *pfx = first ? " " : ", ";
         first = 0;
+
         switch (lanesize) {
             case 1:
                 printf("%s[%u]=0x%02x", pfx, i, ((const unsigned char *)data)[i]);
                 break;
+
             case 2:
                 printf("%s[%u]=0x%04x", pfx, i, ((const unsigned short *)data)[i]);
                 break;
+
             case 4:
                 printf("%s[%u]=0x%08x", pfx, i, ((const unsigned int *)data)[i]);
                 break;
+
             case 8:
-                printf("%s[%u]=0x%016llx", pfx, i, ((const unsigned long long *)data)[i]);
+                printf("%s[%u]=0x%016llx", pfx, i,
+                       ((const unsigned long long *)data)[i]);
                 break;
+
             default:
                 break;
         }
     }
+
     printf(" }\n");
 }
 
@@ -74,9 +88,11 @@ int main(int argc, char **argv)
     const unsigned n = VEC_LANES(bar_vec);
     unsigned i;
     printf("bar_vec = { ");
+
     for (i = 0; i < n; i++) {
         printf("[%2u] = 0x%016llx ", i, bar_vec[i]);
     }
+
     printf("}\n");
     return 0;
 }

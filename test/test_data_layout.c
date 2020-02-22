@@ -23,7 +23,7 @@
         return ++test_idx;						\
     }									\
 }) /*end of macro */
-    
+
 
 int main(int argc, char **argv)
 {
@@ -33,7 +33,7 @@ int main(int argc, char **argv)
         u32_8 x8;
         u32_16 x16;
         unsigned int s[16];
-    } tmp_accum = {}; 
+    } tmp_accum = {};
 
     CHECK_ALIGNMENT_AND_SIZE(tmp_accum.x4, 16, __LINE__);
     CHECK_ALIGNMENT_AND_SIZE(tmp_accum.x8, 32, __LINE__);

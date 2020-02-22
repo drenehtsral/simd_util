@@ -43,7 +43,7 @@ int main(int argc, char **argv)
         unsigned short     m16;
         unsigned char      m8;
     } in = { .m64 =  0xfedcba9876543211ULL };
-    
+
 
     PING_PONG_TEST(in.m64, u8_64);
     PING_PONG_TEST(in.m32, u8_32);
@@ -52,15 +52,15 @@ int main(int argc, char **argv)
     PING_PONG_TEST(in.m32, u16_32);
     PING_PONG_TEST(in.m16, u16_16);
     PING_PONG_TEST(in.m8, u16_8);
-    
+
     PING_PONG_TEST(in.m16, u32_16);
     PING_PONG_TEST(in.m8, u32_8);
     PING_PONG_TEST((in.m8 & 0xF), u32_4);
-    
+
     PING_PONG_TEST(in.m8, u64_8);
     PING_PONG_TEST(in.m8 & 0xF, u64_4);
     PING_PONG_TEST(in.m8 & 0x3, u64_2);
-    
+
     INDEX_TEST(u8_64);
     INDEX_TEST(u16_32);
     INDEX_TEST(u32_16);

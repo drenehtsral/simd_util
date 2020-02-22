@@ -22,11 +22,12 @@ int main(int argc, char **argv)
         u64_2 x64;
         u64_4 y64;
         u64_8 z64;
-    } test; 
+    } test;
 
     unsigned i;
+
     for (i = 0; i < sizeof(test.z8); i++) test.z8[i] = i;
-    
+
     debug_print_vec(test.x8, ~2);
     debug_print_vec(test.y8, ~4);
     debug_print_vec(test.z8, ~8);

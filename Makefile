@@ -1,10 +1,12 @@
 
-.PHONY: test clean
+.PHONY: test clean style
 
 TARGET ?= icl
 
 CC=gcc-8
 SDE ?= sde64
+
+ASTYLE_OPTS ?= -s4 -xC100 -xt2 -K -S -p -xg -f
 
 SDE_CMD ?= $(SDE) -$(TARGET) --
 
@@ -15,12 +17,12 @@ OPTS_icl = $(OPTS_skx) -mavx512vpopcntdq -mavx512vbmi
 OPTS_broken = -mavx512vbmi2 -mvpclmulqdq
 
 ifdef DEBUG
-	CFLAGS_BASE = -g -O0
+	CFLAGS_BASE = -O0
 else
 	CFLAGS_BASE = -O3
 endif
 
-CFLAGS = -Wall $(OPTS_$(TARGET)) $(CFLAGS_BASE)
+CFLAGS = -g -Wall $(OPTS_$(TARGET)) $(CFLAGS_BASE)
 
 test_srcs = test/*.c
 
@@ -41,4 +43,6 @@ test: $(base_objs) $(test_srcs)
 clean:
 	rm -f src/*.o
 	
+style:
+	find . -type f -name "*.[ch]" | xargs astyle $(ASTYLE_OPTS)
 
