@@ -66,4 +66,5 @@ In addition, there will be some C files to provide a few additional things not e
   * http://www.cs.columbia.edu/~kar/pubsk/simd.pdf
   * https://software.intel.com/sites/landingpage/IntrinsicsGuide/
   * https://software.intel.com/en-us/articles/intel-software-development-emulator
+  * https://www.agner.org/optimize/
     
