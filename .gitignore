@@ -54,3 +54,6 @@ dkms.conf
 # Editor Turds
 *~
 
+# Misc. turds (astyle, patch, etc.)
+*.orig
+*.rej

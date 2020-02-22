@@ -1,5 +1,5 @@
 
-.PHONY: test clean style
+.PHONY: test clean style flush_turds
 
 TARGET ?= icl
 
@@ -45,4 +45,9 @@ clean:
 	
 style:
 	find . -type f -name "*.[ch]" | xargs astyle $(ASTYLE_OPTS)
+
+flush_turds:
+	find . -type f -name "*.orig" | xargs rm -f
+	find . -type f -name "*.reg" | xargs rm -f
+	find . -type f -name "*~" | xargs rm -f
 
