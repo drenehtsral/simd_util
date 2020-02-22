@@ -169,4 +169,86 @@ static inline void __attribute__((__error__("Unknown lane size"))) _mask_util_un
 }) /* end of macro */
 
 
+static const union {
+    __m128i x;
+    __m256i y;
+    __m512i z;
+    unsigned char u8[64];
+} __idx_u8_union = { .u8 = {
+    0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f,
+    0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f,
+    0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x29, 0x2a, 0x2b, 0x2c, 0x2d, 0x2e, 0x2f,
+    0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x3a, 0x3b, 0x3c, 0x3d, 0x3e, 0x3f,
+}};
+
+/*
+ * While not *strictly* mask-related this macro to generate one of the
+ * many zero-extend-all-lanes instructions allows a single source union
+ * (above) to allow quick-and-inexpensive generation of a vector of the
+ * form where each lane contains its own lane index.  Otherwise the
+ * compiler will happily stick one in the initialized constants secion of
+ * each object for each vector type, which is wasteful of cache, and bandwidth
+ * (it's silly to store a u64_8 of {0, 1, 2, 3, 4, 5, 6, 7} using 64 bytes
+ * of memory when you can store less.
+ */
+#define IDX_VEC(_type)							\
+({									\
+    union {								\
+        __m128i x;							\
+        __m256i y;							\
+        __m512i z;                                                      \
+        _type out;							\
+    } _tmp = {};							\
+                                                                        \
+    if (sizeof(_tmp.out) == 16) {					\
+        /* XMM register --> Mask */					\
+        if (sizeof(_tmp.out[0]) == 1) {					\
+            _tmp.x = __idx_u8_union.x;					\
+        } else if (sizeof(_tmp.out[0]) == 2) {				\
+            _tmp.x = _mm_cvtepu8_epi16(__idx_u8_union.x);		\
+        } else if (sizeof(_tmp.out[0]) == 4) {				\
+            _tmp.x = _mm_cvtepu8_epi32(__idx_u8_union.x);		\
+        } else if (sizeof(_tmp.out[0]) == 8) {				\
+            _tmp.x = _mm_cvtepu8_epi64(__idx_u8_union.x);		\
+        } else {							\
+            /* error case -- unknown lane size */			\
+            _mask_util_unknown_lane_size();				\
+        }								\
+    } else if (sizeof(_tmp.out) == 32) {				\
+        /* YMM register --> Mask */					\
+        if (sizeof(_tmp.out[0]) == 1) {					\
+            _tmp.y = __idx_u8_union.y;					\
+        } else if (sizeof(_tmp.out[0]) == 2) {				\
+            _tmp.y = _mm256_cvtepu8_epi16(__idx_u8_union.x);		\
+        } else if (sizeof(_tmp.out[0]) == 4) {				\
+            _tmp.y = _mm256_cvtepu8_epi32(__idx_u8_union.x);		\
+        } else if (sizeof(_tmp.out[0]) == 8) {				\
+            _tmp.y = _mm256_cvtepu8_epi64(__idx_u8_union.x);		\
+        } else {							\
+            /* error case -- unknown lane size */			\
+            _mask_util_unknown_lane_size();				\
+        }								\
+    } else if (sizeof(_tmp.out) == 64) {				\
+        /* ZMM register --> Mask */					\
+        if (sizeof(_tmp.out[0]) == 1) {					\
+            _tmp.z = __idx_u8_union.z;					\
+        } else if (sizeof(_tmp.out[0]) == 2) {				\
+            _tmp.z = _mm512_cvtepu8_epi16(__idx_u8_union.y);		\
+        } else if (sizeof(_tmp.out[0]) == 4) {				\
+            _tmp.z = _mm512_cvtepu8_epi32(__idx_u8_union.x);		\
+        } else if (sizeof(_tmp.out[0]) == 8) {				\
+            _tmp.z = _mm512_cvtepu8_epi64(__idx_u8_union.x);		\
+        } else {							\
+            /* error case -- unknown lane size */			\
+            _mask_util_unknown_lane_size();				\
+        }								\
+    } else {								\
+        /* error case -- unknown vector size */				\
+        _mask_util_unknown_vector_size();				\
+    }									\
+    /* Return resulting index vector */					\
+    _tmp.out;								\
+}) /* end of macro */
+
+
 #endif /* _MASK_UTIL_H_ */

@@ -20,6 +20,21 @@
     }													\
 }) /* end of macro */
 
+#define INDEX_TEST(_vec_type)							\
+({										\
+    const _vec_type itmp = IDX_VEC(_vec_type);					\
+    const unsigned n = VEC_LANES(itmp);						\
+    unsigned i;									\
+    for (i = 0; i < n; i++) {							\
+        if (itmp[i] != i) {							\
+            printf(OUT_PREFIX "IDX_VEC(%s) test failed!\n", #_vec_type);	\
+            printf(OUT_PREFIX OUT_PREFIX);					\
+            debug_print_vec(itmp, ~0);						\
+            return -1;								\
+        }									\
+    }										\
+}) /* end of macro */
+
 int main(int argc, char **argv)
 {
     const union {
@@ -46,6 +61,21 @@ int main(int argc, char **argv)
     PING_PONG_TEST(in.m8 & 0xF, u64_4);
     PING_PONG_TEST(in.m8 & 0x3, u64_2);
     
+    INDEX_TEST(u8_64);
+    INDEX_TEST(u16_32);
+    INDEX_TEST(u32_16);
+    INDEX_TEST(u64_8);
+
+    INDEX_TEST(u8_32);
+    INDEX_TEST(u16_16);
+    INDEX_TEST(u32_8);
+    INDEX_TEST(u64_4);
+
+    INDEX_TEST(u8_16);
+    INDEX_TEST(u16_8);
+    INDEX_TEST(u32_4);
+    INDEX_TEST(u64_2);
+
     printf(OUT_PREFIX "%s: PASS\n", __FILE__);
     return 0;
 }

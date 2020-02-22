@@ -9,7 +9,7 @@ void _debug_print_vec(const void *data, const unsigned nlanes, const unsigned la
     const unsigned _sz = sizeof(__vec);				\
     const unsigned _ls = sizeof(__vec[0]);			\
     const unsigned _nl = _sz / _ls;				\
-    _debug_print_vec(&(_vec), _nl, _ls, #_vec, (_mask));	\
+    _debug_print_vec(&(__vec), _nl, _ls, #_vec, (_mask));	\
 }) /* end of macro */
 
 void consume_data(const void *data, const size_t len);
