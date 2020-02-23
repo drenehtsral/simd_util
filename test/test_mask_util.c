@@ -5,41 +5,41 @@
 
 #define OUT_PREFIX "\t"
 
-#define PING_PONG_TEST(_m_in, _vec_type)								\
-({													\
-    const typeof(_m_in) mtmp = (_m_in);									\
-    const _vec_type vtmp = MASK_TO_VEC(mtmp, _vec_type);						\
-    const typeof(mtmp) mout = VEC_TO_MASK(vtmp);							\
-    if (mout != mtmp) {											\
-        printf(OUT_PREFIX "%lu-bit mask --> %s --> mask failed!\n", sizeof(mtmp) * 8, #_vec_type);	\
-        printf(OUT_PREFIX OUT_PREFIX "input_mask (0x%llx) != output_mask (0x%llx)\n",			\
-                (unsigned long long)mtmp, (unsigned long long)mout);					\
-        printf(OUT_PREFIX OUT_PREFIX);									\
-        debug_print_vec(vtmp, ~0);									\
-        return 1;											\
-    }													\
+#define PING_PONG_TEST(_m_in, _vec_type)                                \
+({                                                  \
+    const typeof(_m_in) mtmp = (_m_in);                                 \
+    const _vec_type vtmp = MASK_TO_VEC(mtmp, _vec_type);                        \
+    const typeof(mtmp) mout = VEC_TO_MASK(vtmp);                            \
+    if (mout != mtmp) {                                         \
+        printf(OUT_PREFIX "%lu-bit mask --> %s --> mask failed!\n", sizeof(mtmp) * 8, #_vec_type);  \
+        printf(OUT_PREFIX OUT_PREFIX "input_mask (0x%llx) != output_mask (0x%llx)\n",           \
+                (unsigned long long)mtmp, (unsigned long long)mout);                    \
+        printf(OUT_PREFIX OUT_PREFIX);                                  \
+        debug_print_vec(vtmp, ~0);                                  \
+        return 1;                                           \
+    }                                                   \
 }) /* end of macro */
 
-#define INDEX_TEST(_vec_type)							\
-({										\
-    const _vec_type itmp = IDX_VEC(_vec_type);					\
-    const unsigned n = VEC_LANES(itmp);						\
-    unsigned i;									\
-    for (i = 0; i < n; i++) {							\
-        if (itmp[i] != i) {							\
-            printf(OUT_PREFIX "IDX_VEC(%s) test failed!\n", #_vec_type);	\
-            printf(OUT_PREFIX OUT_PREFIX);					\
-            debug_print_vec(itmp, ~0);						\
-            return -1;								\
-        }									\
-    }										\
+#define INDEX_TEST(_vec_type)                           \
+({                                      \
+    const _vec_type itmp = IDX_VEC(_vec_type);                  \
+    const unsigned n = VEC_LANES(itmp);                     \
+    unsigned i;                                 \
+    for (i = 0; i < n; i++) {                           \
+        if (itmp[i] != i) {                         \
+            printf(OUT_PREFIX "IDX_VEC(%s) test failed!\n", #_vec_type);    \
+            printf(OUT_PREFIX OUT_PREFIX);                  \
+            debug_print_vec(itmp, ~0);                      \
+            return -1;                              \
+        }                                   \
+    }                                       \
 }) /* end of macro */
 
 int main(int argc, char **argv)
 {
     const union {
         unsigned long long m64;
-        unsigned	   m32;
+        unsigned       m32;
         unsigned short     m16;
         unsigned char      m8;
     } in = { .m64 =  0xfedcba9876543211ULL };

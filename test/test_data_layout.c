@@ -5,23 +5,23 @@
 
 #define OUT_PREFIX "\t"
 
-#define CHECK_ALIGNMENT_AND_SIZE(_entity, _expected, _line)		\
-({									\
-    const size_t expected = _expected;					\
-    const size_t align = alignof(_entity);				\
-    const size_t size = sizeof(_entity);				\
-    if (align != expected) {						\
+#define CHECK_ALIGNMENT_AND_SIZE(_entity, _expected, _line)     \
+({                                  \
+    const size_t expected = _expected;                  \
+    const size_t align = alignof(_entity);              \
+    const size_t size = sizeof(_entity);                \
+    if (align != expected) {                        \
         printf(OUT_PREFIX "Alignment of %s is %lu not the expected %lu!"\
-                " (%s:%d)\n", #_entity, align, expected,		\
-                __FILE__, _line);					\
-        return ++test_idx;						\
-    }									\
-    if (size != expected) {						\
-        printf(OUT_PREFIX "Size of %s is %lu not the expected %lu!"	\
-                " (%s:%d)\n", #_entity, size, expected,	        	\
-                __FILE__, _line);					\
-        return ++test_idx;						\
-    }									\
+                " (%s:%d)\n", #_entity, align, expected,        \
+                __FILE__, _line);                   \
+        return ++test_idx;                      \
+    }                                   \
+    if (size != expected) {                     \
+        printf(OUT_PREFIX "Size of %s is %lu not the expected %lu!" \
+                " (%s:%d)\n", #_entity, size, expected,             \
+                __FILE__, _line);                   \
+        return ++test_idx;                      \
+    }                                   \
 }) /*end of macro */
 
 

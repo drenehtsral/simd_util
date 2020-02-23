@@ -9,8 +9,8 @@
 #define OUT_PREFIX "\t"
 
 typedef struct {
-    unsigned		foo32;
-    unsigned    	bar32;
+    unsigned        foo32;
+    unsigned        bar32;
     unsigned long long baz64;
 } foo_struct_t;
 
@@ -143,7 +143,7 @@ int main(int argc, char **argv)
     const unsigned arr_mask = arr_dim - 1;
 
     union {
-        u32_8 	 u32_8[LOOPS];
+        u32_8    u32_8[LOOPS];
         unsigned      u32[0];
     } idx;
 

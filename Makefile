@@ -6,7 +6,7 @@ TARGET ?= icl
 CC=gcc-8
 SDE ?= sde64
 
-ASTYLE_OPTS ?= -s4 -xC100 -xt2 -K -S -p -xg -f
+ASTYLE_OPTS ?= -s4 -xC100 -xt2 -K -S -p -xg -f -c
 
 SDE_CMD ?= $(SDE) -$(TARGET) --
 

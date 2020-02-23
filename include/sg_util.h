@@ -15,20 +15,20 @@ typedef union {
     void *p;
     const void *cp;
     struct {
-        u64	addr : 63,
+        u64 addr : 63,
             inv  : 1;
     };
 } masked_ptr_u;
 
 typedef union {
-    i64_4		vec;
-    masked_ptr_u	mp[4];
+    i64_4       vec;
+    masked_ptr_u    mp[4];
 } mpv_4;
 
 typedef union {
-    i64_8		vec;
-    masked_ptr_u	mp[8];
-    mpv_4	v4[2];
+    i64_8       vec;
+    masked_ptr_u    mp[8];
+    mpv_4   v4[2];
 } mpv_8;
 
 
@@ -62,82 +62,80 @@ static inline __mmask8 mpv_8_fixup_mask(mpv_8 * const RESTR pv)
     return (__mmask8) (VEC_TO_MASK(t0) ^ 0xFF);
 }
 
-#define GATHER_u32_4_FROM_MPV4(_mpv)						\
-({										\
-    const __m128i __zero = {};							\
-    mpv_4 __mpv = { .vec = (_mpv).vec };					\
-    const __mmask8 __mask = mpv_4_fixup_mask(&__mpv);				\
-    (u32_4)_mm256_mmask_i64gather_epi32(__zero, __mask,				\
-            (__m256i)__mpv.vec, (void *)0, 1);					\
+#define GATHER_u32_4_FROM_MPV4(_mpv)                    \
+({                                                      \
+    const __m128i __zero = {};                          \
+    mpv_4 __mpv = { .vec = (_mpv).vec };                \
+    const __mmask8 __mask = mpv_4_fixup_mask(&__mpv);   \
+    (u32_4)_mm256_mmask_i64gather_epi32(__zero, __mask, \
+            (__m256i)__mpv.vec, (void *)0, 1);          \
 }) /* end of macro */
 
-#define GATHER_u64_4_FROM_MPV4(_mpv)						\
-({										\
-    const __m256i __zero = {};							\
-    mpv_4 __mpv = { .vec = (_mpv).vec };					\
-    const __mmask8 __mask = mpv_4_fixup_mask(&__mpv);				\
-    (u64_4)_mm256_mmask_i64gather_epi64(__zero, __mask,				\
-            (__m256i)__mpv.vec, (void *)0, 1);					\
+#define GATHER_u64_4_FROM_MPV4(_mpv)                    \
+({                                                      \
+    const __m256i __zero = {};                          \
+    mpv_4 __mpv = { .vec = (_mpv).vec };                \
+    const __mmask8 __mask = mpv_4_fixup_mask(&__mpv);   \
+    (u64_4)_mm256_mmask_i64gather_epi64(__zero, __mask, \
+            (__m256i)__mpv.vec, (void *)0, 1);          \
 }) /* end of macro */
 
-#define GATHER_u32_8_FROM_MPV8(_mpv)						\
-({										\
-    const __m256i __zero = {};							\
-    mpv_8 __mpv = { .vec = (_mpv).vec };					\
-    const __mmask8 __mask = mpv_8_fixup_mask(&__mpv);				\
-    (u32_8)_mm512_mask_i64gather_epi32(__zero, __mask,				\
-            (__m512i)__mpv.vec, (void *)0, 1);					\
+#define GATHER_u32_8_FROM_MPV8(_mpv)                    \
+({                                                      \
+    const __m256i __zero = {};                          \
+    mpv_8 __mpv = { .vec = (_mpv).vec };                \
+    const __mmask8 __mask = mpv_8_fixup_mask(&__mpv);   \
+    (u32_8)_mm512_mask_i64gather_epi32(__zero, __mask,  \
+            (__m512i)__mpv.vec, (void *)0, 1);          \
 }) /* end of macro */
 
-#define GATHER_u64_8_FROM_MPV8(_mpv)						\
-({										\
-    const __m512i __zero = {};							\
-    mpv_8 __mpv = { .vec = (_mpv).vec };					\
-    const __mmask8 __mask = mpv_8_fixup_mask(&__mpv);				\
-    (u64_8)_mm512_mask_i64gather_epi64(__zero, __mask,				\
-            (__m512i)__mpv.vec, (void *)0, 1);					\
+#define GATHER_u64_8_FROM_MPV8(_mpv)                    \
+({                                                      \
+    const __m512i __zero = {};                          \
+    mpv_8 __mpv = { .vec = (_mpv).vec };                \
+    const __mmask8 __mask = mpv_8_fixup_mask(&__mpv);   \
+    (u64_8)_mm512_mask_i64gather_epi64(__zero, __mask,  \
+            (__m512i)__mpv.vec, (void *)0, 1);          \
 }) /* end of macro */
 
-#define GATHER_u32_8_FROM_STRUCTS(_struct, _field, _mpv)			\
-({										\
-    const __m256i __zero = {};							\
-    const void * __base = (const void *) __builtin_offsetof(_struct, _field);	\
-    mpv_8 __mpv = { .vec = (_mpv).vec };					\
-    const __mmask8 __mask = mpv_8_fixup_mask(&__mpv);				\
-    (u32_8)_mm512_mask_i64gather_epi32(__zero, __mask,				\
-            (__m512i)__mpv.vec, __base, 1);					\
+#define GATHER_u32_8_FROM_STRUCTS(_struct, _field, _mpv)                        \
+({                                                                              \
+    const __m256i __zero = {};                                                  \
+    const void * __base = (const void *) __builtin_offsetof(_struct, _field);   \
+    mpv_8 __mpv = { .vec = (_mpv).vec };                                        \
+    const __mmask8 __mask = mpv_8_fixup_mask(&__mpv);                           \
+    (u32_8)_mm512_mask_i64gather_epi32(__zero, __mask,                          \
+            (__m512i)__mpv.vec, __base, 1);                                     \
 }) /* end of macro */
 
-#define GATHER_u64_8_FROM_STRUCTS(_struct, _field, _mpv)			\
-({										\
-    const __m512i __zero = {};							\
-    const void * __base = (const void *) __builtin_offsetof(_struct, _field);	\
-    mpv_8 __mpv = { .vec = (_mpv).vec };					\
-    const __mmask8 __mask = mpv_8_fixup_mask(&__mpv);				\
-    (u64_8)_mm512_mask_i64gather_epi64(__zero, __mask,				\
-            (__m512i)__mpv.vec, __base, 1);					\
+#define GATHER_u64_8_FROM_STRUCTS(_struct, _field, _mpv)                        \
+({                                                                              \
+    const __m512i __zero = {};                                                  \
+    const void * __base = (const void *) __builtin_offsetof(_struct, _field);   \
+    mpv_8 __mpv = { .vec = (_mpv).vec };                                        \
+    const __mmask8 __mask = mpv_8_fixup_mask(&__mpv);                           \
+    (u64_8)_mm512_mask_i64gather_epi64(__zero, __mask,                          \
+            (__m512i)__mpv.vec, __base, 1);                                     \
 }) /* end of macro */
 
-#define GATHER_u32_4_FROM_STRUCTS(_struct, _field, _mpv)			\
-({										\
-    const __m128i __zero = {};							\
-    const void * __base = (const void *) __builtin_offsetof(_struct, _field);	\
-    mpv_4 __mpv = { .vec = (_mpv).vec };					\
-    const __mmask8 __mask = mpv_4_fixup_mask(&__mpv);				\
-    (u32_4)_mm256_mmask_i64gather_epi32(__zero, __mask,				\
-            (__m256i)__mpv.vec, __base, 1);					\
+#define GATHER_u32_4_FROM_STRUCTS(_struct, _field, _mpv)                        \
+({                                                                              \
+    const __m128i __zero = {};                                                  \
+    const void * __base = (const void *) __builtin_offsetof(_struct, _field);   \
+    mpv_4 __mpv = { .vec = (_mpv).vec };                                        \
+    const __mmask8 __mask = mpv_4_fixup_mask(&__mpv);                           \
+    (u32_4)_mm256_mmask_i64gather_epi32(__zero, __mask,                         \
+            (__m256i)__mpv.vec, __base, 1);                                     \
 }) /* end of macro */
 
-#define GATHER_u64_4_FROM_STRUCTS(_struct, _field, _mpv)			\
-({										\
-    const __m256i __zero = {};							\
-    const void * __base = (const void *) __builtin_offsetof(_struct, _field);	\
-    mpv_4 __mpv = { .vec = (_mpv).vec };					\
-    const __mmask8 __mask = mpv_4_fixup_mask(&__mpv);				\
-    (u64_4)_mm256_mmask_i64gather_epi64(__zero, __mask,				\
-            (__m256i)__mpv.vec, __base, 1);					\
+#define GATHER_u64_4_FROM_STRUCTS(_struct, _field, _mpv)                        \
+({                                                                              \
+    const __m256i __zero = {};                                                  \
+    const void * __base = (const void *) __builtin_offsetof(_struct, _field);   \
+    mpv_4 __mpv = { .vec = (_mpv).vec };                                        \
+    const __mmask8 __mask = mpv_4_fixup_mask(&__mpv);                           \
+    (u64_4)_mm256_mmask_i64gather_epi64(__zero, __mask,                         \
+            (__m256i)__mpv.vec, __base, 1);                                     \
 }) /* end of macro */
-
-
 
 #endif /* _SG_UTIL_H_ */
