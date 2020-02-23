@@ -117,22 +117,52 @@ int randomize_data(void * const RESTR data, const size_t len)
     return 0;
 }
 
+int get_page_size(const char *path)
+{
+    struct stat st = {};
+
+    if (stat(path, &st)) {
+        return -1;
+    }
+
+    return (st.st_blksize <= PAGE_SIZE) ? PAGE_SIZE : st.st_blksize;
+}
+
+seg_desc_t map_segment(const char *path)
+{
+    seg_desc_t tmp = {};
+    const int fd = open(path, O_RDWR);
+
+    if (fd < 0) {
+        return tmp;
+    }
+
+    struct stat st = {};
+
+    fstat(fd, &st);
+
+    tmp.psize = (st.st_blksize <= PAGE_SIZE) ? PAGE_SIZE : st.st_blksize;
+
+    tmp.maplen = st.st_size & ~(tmp.psize - 1);
+
+    tmp.ptr = mmap(NULL, tmp.maplen, PROT_READ | PROT_WRITE,
+                   MAP_SHARED | MAP_POPULATE, fd, 0);
+
+    if (tmp.ptr == MAP_FAILED) {
+        tmp.ptr = NULL;
+    }
+
+    close(fd);
+    return tmp;
+}
+
 #if STANDALONE_TEST
 
 int main(int argc, char **argv)
 {
-    const u64_8 foo_vec = {0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7};
-    const u64_8 bar_vec = TSC_SLOPPY() << foo_vec;
+    seg_desc_t seg = map_segment("/dev/hugepages/foobar");
 
-    const unsigned n = VEC_LANES(bar_vec);
-    unsigned i;
-    printf("bar_vec = { ");
-
-    for (i = 0; i < n; i++) {
-        printf("[%2u] = 0x%016llx ", i, bar_vec[i]);
-    }
-
-    printf("}\n");
+    printf("ptr = %p  maplen = 0x%lx psize = 0x%lx\n", seg.ptr, seg.maplen, seg.psize);
     return 0;
 }
 

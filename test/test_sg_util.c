@@ -25,6 +25,7 @@ static foo_struct_t * setup_data(unsigned n)
     foo_struct_t * ptr = mmap(NULL, req, PROT_READ | PROT_WRITE, map_flags, -1, 0);
 
     if (ptr == MAP_FAILED) {
+        printf(OUT_PREFIX "Retrying mapping with normal pages.\n");
         ptr = mmap(NULL, req, PROT_READ | PROT_WRITE, map_flags & ~MAP_HUGETLB, -1, 0);
     }
 
