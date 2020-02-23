@@ -171,7 +171,8 @@ int main(int argc, char **argv)
         ptrs += (unsigned long long)arr;
         ptrs += ((u64_8)_mm512_cvtepu32_epi64((__m256i)idx.u32_8[i])) * sizeof(foo_struct_t);
 
-        accum += GATHER_u32_8_FROM_STRUCTS(foo_struct_t, foo32, ~0, ptrs);
+        mpv_8 tmp = { .vec = (i64_8)ptrs };
+        accum += GATHER_u32_8_FROM_STRUCTS(foo_struct_t, foo32, tmp);
     }
 
     consume_data(&accum, sizeof(accum));

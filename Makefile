@@ -1,5 +1,5 @@
 
-.PHONY: test clean style flush_turds
+.PHONY: test clean style flush_turds base
 
 TARGET ?= icl
 
@@ -28,26 +28,35 @@ test_srcs = test/*.c
 
 base_objs = src/base_util.o
 
+# While I _could_ make an auto-deps mechanism for the one or two
+# object files so that touching the headers would make it rebuild
+# the objects, that's just plain silly given this is nearly ALL
+# headers anyway (as intended).  As such I just always clean.
 
-all: base
-
+all: clean base
 
 base: $(base_objs)
 
+.ONESHELL: test
 test: $(base_objs) $(test_srcs)
 	@echo "Starting tests using \"$(SDE_CMD)\" to run tests:"
-	@for f in $(filter-out $(base_objs),$^); do $(CC) $(CFLAGS) -o test/a.out $(base_objs) $$f &&  $(SDE_CMD) test/a.out && rm -f test/a.out; done
+	@set -e pipefail
+	@for f in $(filter-out $(base_objs),$^); do
+	@    $(CC) $(CFLAGS) -o test/a.out $(base_objs) $$f
+	@    $(SDE_CMD) test/a.out && rm -f test/a.out;
+	@done
 	@echo "All tests PASS."
 
 
 clean:
-	rm -f src/*.o
+	@echo "Cleaning."
+	@rm -f src/*.o
 	
 style:
 	find . -type f -name "*.[ch]" | xargs astyle $(ASTYLE_OPTS)
 
 flush_turds:
 	find . -type f -name "*.orig" | xargs rm -f
-	find . -type f -name "*.reg" | xargs rm -f
+	find . -type f -name "*.rej" | xargs rm -f
 	find . -type f -name "*~" | xargs rm -f
 
