@@ -51,8 +51,94 @@ static foo_struct_t * setup_data(unsigned n)
 
 #define LOOPS (1U << 13)
 
+static const u64 barfola = 0xDEADBEEFDEADBEEFUL;
+
+static int test_masked_pointer_vectors(void)
+{
+    const union {
+        mpv_8 mpv_in;
+        u64 u64[8];
+    } u = { .u64 = {
+            [7] = 0x0,
+            [6] = (u64)(-1L),
+            [5] = 0xDEADBEEFUL,
+            [4] = (u64)&setup_data,
+            [3] = ((~0UL) >> 1),
+            [2] = MSB64,
+            [1] = 8,
+            [0] = (u64)NULL
+        }
+    };
+
+    const union {
+        i64_8 vec;
+        u64   u64[8];
+    } bad_lanes = { .u64 = {
+            [7] = MSB64,
+            [6] = MSB64,
+            [2] = MSB64,
+            [0] = MSB64,
+        }
+    };
+
+    const mpv_8 mpv_fixed = { .vec = u.mpv_in.vec | bad_lanes.vec };
+
+    const __mmask8 exp_fixup_mask8 = 0b00111010;
+    const __mmask8 exp_fixup_mask4 = exp_fixup_mask8 & 0xF;
+
+    mpv_8 mpv8_out = u.mpv_in;
+    mpv_4 mpv4_out = u.mpv_in.v4[0];
+
+    const __mmask8 mpv8_mask_out = mpv_8_fixup_mask(&mpv8_out);
+    const __mmask8 mpv4_mask_out = mpv_4_fixup_mask(&mpv4_out);
+
+    if (mpv8_mask_out != exp_fixup_mask8) {
+        printf(OUT_PREFIX "mpv_8_fixup_mask() did not produce expected results: 0x%x != 0x%x\n",
+               mpv8_mask_out, exp_fixup_mask8);
+        return -1;
+    }
+
+    if (mpv4_mask_out != exp_fixup_mask4) {
+        printf(OUT_PREFIX "mpv_4_fixup_mask() did not produce expected results: 0x%x != 0x%x\n",
+               mpv4_mask_out, exp_fixup_mask4);
+        return -1;
+    }
+
+    if (VEC_TO_MASK(mpv8_out.vec != mpv_fixed.vec)) {
+        printf(OUT_PREFIX "mpv_8_fixup_mask() did not produce expected normalized pointer vector.\n");
+        return -1;
+    }
+
+    if (VEC_TO_MASK(mpv4_out.vec != mpv_fixed.v4[0].vec)) {
+        printf(OUT_PREFIX "mpv_4_fixup_mask() did not produce expected normalized pointer vector.\n");
+        return -1;
+    }
+
+    const u64 splat = 0xfedcba9876543210UL;
+
+    mpv_4 foo_ptr_vec = {
+        .vec = {(i64)(&splat), 0, (i64)&barfola, 0}
+    };
+    const u64_4 expected_u64_4_out = {splat, 0, barfola, 0};
+
+    const u64_4 gather_u64_4_out = GATHER_u64_4_FROM_MPV4(foo_ptr_vec);
+
+    if (VEC_TO_MASK(gather_u64_4_out != expected_u64_4_out)) {
+        printf(OUT_PREFIX "GATHER_u64_4_FROM_MPV4() did not return expected results.\n");
+        return -1;
+    }
+
+    return 0;
+}
+
 int main(int argc, char **argv)
 {
+
+    if (test_masked_pointer_vectors()) {
+        printf(OUT_PREFIX "%s FAIL\n", __FILE__);
+        return -1;
+    }
+
     const unsigned arr_dim = 1 << 19;
     const unsigned arr_mask = arr_dim - 1;
 
@@ -88,7 +174,7 @@ int main(int argc, char **argv)
         accum += GATHER_u32_8_FROM_STRUCTS(foo_struct_t, foo32, ~0, ptrs);
     }
 
-    debug_print_vec(accum, ~0);
+    consume_data(&accum, sizeof(accum));
 
     printf(OUT_PREFIX "%s: PASS\n", __FILE__);
     return 0;
