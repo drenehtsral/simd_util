@@ -22,6 +22,11 @@ void consume_data(const void * const RESTR data, const size_t len)
      */
 }
 
+__mmask16 barfola(const u32_16 a, const u32_16 b, const u32_16 c)
+{
+    return lookup_1024_bit_x16(a, b, c);
+}
+
 /*
  * This is a quick and dirty universal masked-vector-printing function,
  * It is not intended to be particularly efficient or fancy, but for
@@ -268,9 +273,6 @@ int map_segment(const char *path, seg_desc_t *seg, char *errbuf, const unsigned 
 
     seg->ptr = mmap(req_ptr, seg->maplen, req_prot, req_flags, fd, 0);
 
-    printf("mmap(%p, 0x%lx, 0x%x, 0x%x, %d, 0) --> %p\n", req_ptr, seg->maplen, (unsigned)req_prot,
-           (unsigned)req_flags, fd, seg->ptr);
-
     if (seg->ptr == MAP_FAILED) {
         if (errbuf) {
             const typeof(errno) err_tmp = errno;
@@ -316,6 +318,79 @@ int unmap_segment(const seg_desc_t * const seg)
 }
 
 #if STANDALONE_TEST
+
+typedef struct {
+    u32 magic;              // (0xa1b2c3d4 for usec res., 0xa1b23c4d for nsec res)
+    u16 v_major, v_minor;   // 2.4
+    i32 tz_adj;             // timezone adjust
+    u32 sigfigs;            // ignore
+    u32 snaplen;            // maximum packet bytes stored per packet
+    u32 network_encap;      // 1 = ethernet
+} pcap_file_hdr_t;
+
+typedef struct {
+    u32 ts_sec, ts_frac;    // Seconds and usec or nsec depending
+    u32 incl_len, orig_len; // Included length and original length
+    u8 pkt[0];              // packet...
+} pcap_pkt_hdr_t;
+
+/*
+ * Given a pointer to and length of a raw pcap file loaded into memory, this function will
+ * (if hdrs != NULL and nhdrs > 0) populate an array of pointers to the pcap packet headers
+ * in the file (until it runs out of space in hdrs).
+ * Whether or not hdrs and nhdrs are supplied, the function returns the number of packets in
+ * the pcap file or -1 if it cannot understand the file.
+ */
+int get_pcap_pkt_hdrs(const u8 * const data, const size_t len, const pcap_pkt_hdr_t **hdrs,
+                      const unsigned nhdrs)
+{
+    if ((data == NULL) || (len < (sizeof(pcap_file_hdr_t) + sizeof(pcap_pkt_hdr_t)))) {
+        return -1;
+    }
+
+    const u8 * trav = data;
+    i64 left = len;
+
+    const pcap_file_hdr_t * const fhdr = (pcap_file_hdr_t *)data;
+
+    if ((fhdr->magic != 0xa1b2c3d4) & (fhdr->magic != 0xa1b23c4d)) {
+        return -1;
+    }
+
+    const unsigned max_frac = (fhdr->magic != 0xa1b23c4d) ? 999999999 : 999999;
+
+    if ((fhdr->v_major != 2) | (fhdr->network_encap != 1)) {
+        return -1;
+    }
+
+    trav += sizeof(*fhdr);
+    left -= sizeof(*fhdr);
+
+    const u32 snap = fhdr->snaplen;
+    int count = 0;
+
+    while(left >= sizeof(pcap_pkt_hdr_t)) {
+        const pcap_pkt_hdr_t * const hdr = (pcap_pkt_hdr_t *)trav;
+
+        if ((hdrs != NULL) & (count < nhdrs)) {
+            hdrs[count] = hdr;
+        }
+
+        trav += sizeof(pcap_pkt_hdr_t);
+        left -= sizeof(pcap_pkt_hdr_t);
+
+        if (((snap != 0) & (hdr->incl_len > snap)) |
+                (hdr->incl_len > left) | (hdr->ts_frac > max_frac)) {
+            break;
+        }
+
+        count++;
+        trav += hdr->incl_len;
+        left -= hdr->incl_len;
+    }
+
+    return count;
+}
 
 static void usage(const char *pn)
 {
@@ -395,6 +470,33 @@ int main(int argc, char **argv)
     ret = unmap_segment(seg);
 
     printf("%d -- %s\n", ret, ret ? "Unmap failed" : "Unmap OK");
+
+    struct stat st;
+
+    if (stat("/home/lars/test_data.pcap", &st)) {
+        printf("barf\n");
+        return 2;
+    }
+
+    u8 *data = (u8 *)malloc(st.st_size);
+    int fd = open("/home/lars/test_data.pcap", O_RDONLY);
+    ret = read(fd, data, st.st_size);
+
+    if (ret != st.st_size) {
+        printf("puke\n");
+        return 2;
+    }
+
+    close(fd);
+
+    const pcap_pkt_hdr_t *hdrs[512];
+
+    ret = get_pcap_pkt_hdrs(data, st.st_size, hdrs, sizeof(hdrs) / sizeof(hdrs[0]));
+    int i;
+
+    for (i = 0; i < ret; i++) {
+        printf("hdrs[i] = %p (plen = %u)\n", hdrs[i], hdrs[i]->incl_len);
+    }
 
     return 0;
 }

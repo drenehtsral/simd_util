@@ -14,6 +14,8 @@
 
 #define RESTR __restrict__
 
+#define CONST_FUNC __attribute__((__const__))
+
 #include "base_util.h"
 #include "mask_util.h"
 #include "sg_util.h"

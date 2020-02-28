@@ -1,5 +1,5 @@
 
-.PHONY: test clean style flush_turds base
+.PHONY: test clean style flush_turds base show_sde_cmd
 
 TARGET ?= icl
 
@@ -8,10 +8,22 @@ SDE ?= sde64
 
 ASTYLE_OPTS ?= -s4 -xC100 -xt2 -K -S -p -xg -f -c
 
-SDE_CMD ?= $(SDE) -$(TARGET) --
-
+OPTS_low = -mavx -msse2
 OPTS_skx = -mavx512f -mavx512dq -mavx512bw -mavx512vl -mavx512cd
 OPTS_icl = $(OPTS_skx) -mavx512vpopcntdq -mavx512vbmi
+
+wantlist=$(sort $(subst -m,,$(OPTS_$(TARGET))))
+havelist=$(sort $(shell egrep '^flags\s*:' /proc/cpuinfo | head -n1 | cut -d ':' -f 2- | xargs -n1 echo | egrep "^$$(echo $(wantlist) | tr ' ' '|')$$"))
+
+ifeq "$(wantlist)" "$(havelist)"
+SDE_CMD ?=
+else
+SDE_CMD ?= $(SDE) -$(TARGET) --
+endif
+
+show_sde_cmd:
+	@echo -n "sde command is: "
+	@echo $(SDE_CMD)
 
 #fixme -- Newer binutils than ubuntu comes with?
 OPTS_broken = -mavx512vbmi2 -mvpclmulqdq

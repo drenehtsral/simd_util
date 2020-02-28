@@ -253,5 +253,35 @@ static const union {
     _tmp.out;                                                   \
 }) /* end of macro */
 
+CONST_FUNC static inline __mmask8 lookup_256_bit_x8(const u32_8 table, const u32_8 idx_in)
+{
+    const u32_8 idx = idx_in & 0xFF;
+    const u32_8 sel = idx >> 5;
+    const u32_8 shift = 0x1F - (idx & 0x1F);
+    const u32_8 t0 = (u32_8)_mm256_permutevar8x32_epi32((__m256i)table, (__m256i)sel);
+    const u32_8 t1 = t0 << shift;
+    return VEC_TO_MASK(t1);
+}
+
+CONST_FUNC static inline __mmask16 lookup_512_bit_x16(const u32_16 table, const u32_16 idx_in)
+{
+    const u32_16 idx = idx_in & 0x1FF;
+    const u32_16 sel = idx >> 5;
+    const u32_16 shift = 0x1F - (idx & 0x1F);
+    const u32_16 t0 = (u32_16)_mm512_permutexvar_epi32((__m512i)table, (__m512i)sel);
+    const u32_16 t1 = t0 << shift;
+    return VEC_TO_MASK(t1);
+}
+
+CONST_FUNC static inline __mmask16 lookup_1024_bit_x16(const u32_16 tbl_lo, const u32_16 tbl_hi,
+        const u32_16 idx_in)
+{
+    const u32_16 idx = idx_in & 0x3FF;
+    const u32_16 sel = idx >> 5;
+    const u32_16 shift = 0x1F - (idx & 0x1F);
+    const u32_16 t0 = (u32_16)_mm512_permutex2var_epi32((__m512i)tbl_lo, (__m512i)sel, (__m512i)tbl_hi);
+    const u32_16 t1 = t0 << shift;
+    return VEC_TO_MASK(t1);
+}
 
 #endif /* _MASK_UTIL_H_ */
