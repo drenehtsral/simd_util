@@ -20,20 +20,17 @@ wantlist=$(sort $(subst -m,,$(filter-out -march=% -mtune=% , $(OPTS_$(TARGET))))
 havelist=$(sort $(shell egrep '^flags\s*:' /proc/cpuinfo | head -n1 | cut -d ':' -f 2- | xargs -n1 echo | egrep "^$$(echo $(wantlist) | tr ' ' '|')$$"))
 
 ifeq "$(wantlist)" "$(havelist)"
-SDE_CMD ?=
+    SDE_CMD ?=
 else
-SDE_CMD ?= $(SDE) -$(TARGET) --
+    SDE_CMD ?= $(SDE) -$(TARGET) --
 endif
+
 
 ifdef DEBUG
 	CFLAGS_BASE = -O0
 else
 	CFLAGS_BASE = -O3
 endif
-
-show_sde_cmd:
-	@echo -n "sde command is: "
-	@echo $(SDE_CMD)
 
 CFLAGS = -g -Wall $(TUNE_$(TARGET)) $(OPTS_$(TARGET)) $(CFLAGS_BASE)
 
@@ -44,6 +41,12 @@ CFLAGS = -g -Wall $(TUNE_$(TARGET)) $(OPTS_$(TARGET)) $(CFLAGS_BASE)
 # options like --verbose or whatever that apply to the tests in general.
 TEST_ARGS ?=
 
+all: clean base
+
+show_sde_cmd:
+	@echo -n "sde command is: "
+	@echo $(SDE_CMD)
+
 test_srcs = test/*.c
 
 base_objs = src/base_util.o
@@ -53,7 +56,6 @@ base_objs = src/base_util.o
 # the objects, that's just plain silly given this is nearly ALL
 # headers anyway (as intended).  As such I just always clean.
 
-all: clean base
 
 base: $(base_objs)
 

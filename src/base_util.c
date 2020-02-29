@@ -28,9 +28,9 @@ void consume_data(const void * const RESTR data, const size_t len)
  * convenience it can be called using the debug_print_vec() macro
  * defined in base_util.h
  */
-void _debug_print_vec(const void *data, const unsigned nlanes,
-                      const unsigned lanesize, const char *name,
-                      const unsigned long long mask, FILE *fout)
+void OPT_SIZE _debug_print_vec( const void *data, const unsigned nlanes,
+                                const unsigned lanesize, const char *name,
+                                const unsigned long long mask, FILE *fout)
 {
     unsigned i, first = 1;
 
@@ -85,7 +85,7 @@ void _debug_print_vec(const void *data, const unsigned nlanes,
     fprintf(fout, " }\n");
 }
 
-int randomize_data(void * const RESTR data, const size_t len)
+int OPT_SIZE randomize_data(void * const RESTR data, const size_t len)
 {
     const unsigned max_chunk = (1 << 21);
     char * RESTR trav = (char *)data;
@@ -119,7 +119,7 @@ int randomize_data(void * const RESTR data, const size_t len)
     return 0;
 }
 
-int get_page_size(const char *path)
+int OPT_SIZE get_page_size(const char *path)
 {
     struct stat st = {};
 
@@ -130,7 +130,7 @@ int get_page_size(const char *path)
     return (st.st_blksize <= PAGE_SIZE) ? PAGE_SIZE : st.st_blksize;
 }
 
-int map_segment(const char *path, seg_desc_t *seg, char *errbuf, const unsigned eblen)
+int OPT_SIZE map_segment(const char *path, seg_desc_t *seg, char *errbuf, const unsigned eblen)
 {
     char dirtmp[1024] = {};
     char *dir;
@@ -303,7 +303,7 @@ int map_segment(const char *path, seg_desc_t *seg, char *errbuf, const unsigned 
     }
 }
 
-int unmap_segment(const seg_desc_t * const seg)
+int OPT_SIZE unmap_segment(const seg_desc_t * const seg)
 {
     if (seg == NULL) {
         return -1;

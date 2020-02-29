@@ -284,4 +284,31 @@ CONST_FUNC static inline __mmask16 lookup_1024_bit_x16(const u32_16 tbl_lo, cons
     return VEC_TO_MASK(t1);
 }
 
+PURE_FUNC static inline __mmask8 lookup_P2_bit_x8(const u64 * const RESTR table,
+        const u64 tblbits, const u64_8 idx_in)
+{
+    const __m512i zero = {};
+    const u64 ub = tblbits / BIT_SIZE(*table);
+    const u64_8 tidx = idx_in / BIT_SIZE(*table);
+    const __mmask8 gm = VEC_TO_MASK(tidx < ub);
+    const u64_8 shift = (BIT_SIZE(*table) - 1) - (idx_in & (BIT_SIZE(*table) - 1));
+    const u64_8 t0 = (u64_8)_mm512_mask_i64gather_epi64(zero, gm, (__m512i)tidx, table, sizeof(*table));
+    const u64_8 t1 = t0 << shift;
+    return VEC_TO_MASK(t1);
+}
+
+PURE_FUNC static inline __mmask16 lookup_P2_bit_x16(const u32 * const RESTR table,
+        const u32 tblbits, const u32_16 idx_in)
+{
+    const __m512i zero = {};
+    const u32 ub = tblbits / BIT_SIZE(*table);
+    const u32_16 tidx = idx_in / BIT_SIZE(*table);
+    const __mmask16 gm = VEC_TO_MASK(tidx < ub);
+    const u32_16 shift = (BIT_SIZE(*table) - 1) - (idx_in & (BIT_SIZE(*table) - 1));
+    const u32_16 t0 = (u32_16)_mm512_mask_i32gather_epi32(zero, gm, (__m512i)tidx, table,
+                      sizeof(*table));
+    const u32_16 t1 = t0 << shift;
+    return VEC_TO_MASK(t1);
+}
+
 #endif /* _MASK_UTIL_H_ */

@@ -94,4 +94,10 @@ typedef _SIMD_TYPE_BY_LANE(f64, 8)      f64_8;
 #define EXPR_MATCHES_TYPE(_e, _t)  __builtin_types_compatible_p(typeof(_e), _t)
 #define EXPR_TYPES_MATCH(_e0, _e1) __builtin_types_compatible_p(typeof(_e0), typeof(_e1))
 
+/*
+ * As silly as it looks to have a macro for this it *really* helps readability for things
+ * like lookups in bit vectors, etc.
+ */
+#define BIT_SIZE(_e) (sizeof(_e) * 8)
+
 #endif /* _SIMD_TYPES_H_ */
