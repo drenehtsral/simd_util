@@ -3,16 +3,20 @@
 
 TARGET ?= icl
 
-CC=gcc-8
+CC=gcc
 SDE ?= sde64
 
 ASTYLE_OPTS ?= -s4 -xC100 -xt2 -K -S -p -xg -f -c
 
-OPTS_low = -mavx -msse2
-OPTS_skx = -mavx512f -mavx512dq -mavx512bw -mavx512vl -mavx512cd
-OPTS_icl = $(OPTS_skx) -mavx512vpopcntdq -mavx512vbmi
+TUNE_skx = -mtune=skylake-avx512
+TUNE_cnl = -mtune=cannonlake
+TUNE_icl = -mtune=icelake-client
 
-wantlist=$(sort $(subst -m,,$(OPTS_$(TARGET))))
+OPTS_skx = -mavx512f -mavx512dq -mavx512bw -mavx512vl -mavx512cd
+OPTS_cnl = $(OPTS_skx) -mavx512vbmi -mavx512ifma
+OPTS_icl = $(OPTS_cnl) -mavx512vbmi2 -mvpclmulqdq -mgfni -mvaes -mavx512vpopcntdq
+
+wantlist=$(sort $(subst -m,,$(filter-out -march=% -mtune=% , $(OPTS_$(TARGET)))))
 havelist=$(sort $(shell egrep '^flags\s*:' /proc/cpuinfo | head -n1 | cut -d ':' -f 2- | xargs -n1 echo | egrep "^$$(echo $(wantlist) | tr ' ' '|')$$"))
 
 ifeq "$(wantlist)" "$(havelist)"
@@ -21,20 +25,17 @@ else
 SDE_CMD ?= $(SDE) -$(TARGET) --
 endif
 
-show_sde_cmd:
-	@echo -n "sde command is: "
-	@echo $(SDE_CMD)
-
-#fixme -- Newer binutils than ubuntu comes with?
-OPTS_broken = -mavx512vbmi2 -mvpclmulqdq
-
 ifdef DEBUG
 	CFLAGS_BASE = -O0
 else
 	CFLAGS_BASE = -O3
 endif
 
-CFLAGS = -g -Wall $(OPTS_$(TARGET)) $(CFLAGS_BASE)
+show_sde_cmd:
+	@echo -n "sde command is: "
+	@echo $(SDE_CMD)
+
+CFLAGS = -g -Wall $(TUNE_$(TARGET)) $(OPTS_$(TARGET)) $(CFLAGS_BASE)
 
 test_srcs = test/*.c
 
