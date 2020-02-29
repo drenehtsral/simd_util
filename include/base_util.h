@@ -3,7 +3,7 @@
 
 void _debug_print_vec(const void *data, const unsigned nlanes,
                       const unsigned lanesize, const char *name,
-                      const unsigned long long mask);
+                      const unsigned long long mask, FILE *f);
 
 #define debug_print_vec(_vec, _mask)                        \
 ({                                                          \
@@ -11,7 +11,18 @@ void _debug_print_vec(const void *data, const unsigned nlanes,
     const unsigned _sz = sizeof(__vec);                     \
     const unsigned _ls = sizeof(__vec[0]);                  \
     const unsigned _nl = _sz / _ls;                         \
-    _debug_print_vec(&(__vec), _nl, _ls, #_vec, (_mask));   \
+    _debug_print_vec(&(__vec), _nl, _ls, #_vec, (_mask),    \
+        stdout);                                            \
+}) /* end of macro */
+
+#define debug_fprint_vec(_f, _vec, _mask)                   \
+({                                                          \
+    typeof(_vec) __vec = (_vec);                            \
+    const unsigned _sz = sizeof(__vec);                     \
+    const unsigned _ls = sizeof(__vec[0]);                  \
+    const unsigned _nl = _sz / _ls;                         \
+    _debug_print_vec(&(__vec), _nl, _ls, #_vec, (_mask),    \
+        (_f));                                              \
 }) /* end of macro */
 
 #define PAGE_SHIFT      (12)

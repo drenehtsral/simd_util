@@ -138,4 +138,46 @@ static inline __mmask8 mpv_8_fixup_mask(mpv_8 * const RESTR pv)
             (__m256i)__mpv.vec, __base, 1);                                     \
 }) /* end of macro */
 
+/*
+ * For each lane where idxvec < idxmax return table[idxvec].  For lanes where
+ * idxvec > tsize, return 0;
+ */
+static inline u32_8 gather_u32_from_lookup_table_x8(const u32_8 idxvec,
+        const u32 * const RESTR table,
+        const u32 tsize)
+{
+    const __m256i zero = {};
+    const u32 minmax = (tsize < MSB32) ? tsize : MSB32;
+    const __mmask8 lanes = VEC_TO_MASK(idxvec < minmax);
+    return (u32_8)_mm256_mmask_i32gather_epi32(zero, lanes, (__m256i)idxvec, table, sizeof(u32));
+}
+
+/*
+ * For each lane where idxvec < tsize return table[idxvec].  For lanes where
+ * idxvec > tsize, return 0;
+ */
+static inline u32_16 gather_u32_from_lookup_table_x16(const u32_16 idxvec,
+        const u32 * const RESTR table,
+        const u32 tsize)
+{
+    const __m512i zero = {};
+    const u32 minmax = (tsize < MSB32) ? tsize : MSB32;
+    const __mmask16 lanes = VEC_TO_MASK(idxvec < minmax);
+    return (u32_16)_mm512_mask_i32gather_epi32(zero, lanes, (__m512i)idxvec, table, sizeof(u32));
+}
+
+/*
+ * For each lane where idxvec < tsize return table[idxvec].  For lanes where
+ * idxvec > tsize, return 0;
+ */
+static inline u64_8 gather_u64_from_lookup_table_x8(const u32_8 idxvec,
+        const u64 * const RESTR table,
+        const u32 tsize)
+{
+    const __m512i zero = {};
+    const u32 minmax = (tsize < MSB32) ? tsize : MSB32;
+    const __mmask8 lanes = VEC_TO_MASK(idxvec < minmax);
+    return (u64_8)_mm512_mask_i32gather_epi64(zero, lanes, (__m256i)idxvec, table, sizeof(u64));
+}
+
 #endif /* _SG_UTIL_H_ */

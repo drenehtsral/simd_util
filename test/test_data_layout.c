@@ -62,6 +62,7 @@ int main(int argc, char **argv)
     CHECK_SANITY(!EXPR_MATCHES_TYPE(b, i64_4));
 
     CHECK_SANITY(EXPR_TYPES_MATCH(a, a + 2));
+    CHECK_SANITY(!EXPR_TYPES_MATCH(a, a[0]));
 
     CHECK_ALIGNMENT_AND_SIZE(tmp_accum.x4, 16, __LINE__);
     CHECK_ALIGNMENT_AND_SIZE(tmp_accum.x8, 32, __LINE__);

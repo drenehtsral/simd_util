@@ -132,10 +132,95 @@ static int test_masked_pointer_vectors(void)
     return 0;
 }
 
+static u32 table_u32[128] = {};
+
+static u64 table_u64[37] = {};
+
+static int test_vanilla_lookup_tables(void)
+{
+    unsigned i;
+
+    const unsigned n32 = sizeof(table_u32) / sizeof(table_u32[0]);
+    const unsigned n64 = sizeof(table_u64) / sizeof(table_u64[0]);
+
+    for(i = 0; i < n32; i++) {
+        table_u32[i] = i | MSB32;
+    }
+
+    for(i = 0; i < n64; i++) {
+        table_u64[i] = ~(1UL << i);
+    }
+
+    const union {
+        u32_16  z;
+        u32_8   y;
+        u32     s[0];
+    } idx = { .z = {
+            2,  3,  5,  7,  11, 13, 17, 19,
+            23, 29, 31, 37, 41, 43, 47, 53
+        }
+    };
+
+    const u32_8 idx_a = idx.y * 10;
+    const u32_16 idx_b = idx.z + 1;
+    const u32_8 idx_c = idx.y;
+    const u32_8 idx_d = {MSB32, n32, n32 - 1, 0, 1, 2, 3, 4};
+
+    const u32_8 a = gather_u32_from_lookup_table_x8(idx_a, table_u32, n32);
+    const u32_16 b = gather_u32_from_lookup_table_x16(idx_b, table_u32, n32);
+    const u64_8 c = gather_u64_from_lookup_table_x8(idx_c, table_u64, n64);
+    const u32_8 d = gather_u32_from_lookup_table_x8(idx_d, table_u32, n32);
+
+    for (i = 0; i < 16; i++) {
+        if (i < 8) {
+            const unsigned aiv = idx_a[i] < n32;
+            const u32 a_exp = aiv ? table_u32[idx_a[i]] : 0;
+
+            if (a_exp != a[i]) {
+                printf(OUT_PREFIX "Unexpected table lookup gather result %s:%d\n",
+                       __FILE__, __LINE__);
+                return 0x100 + i;
+            }
+
+            const unsigned civ = idx_c[i] < n64;
+            const u64 c_exp = civ ? table_u64[idx_c[i]] : 0;
+
+            if (c_exp != c[i]) {
+                printf(OUT_PREFIX "Unexpected table lookup gather result %s:%d\n",
+                       __FILE__, __LINE__);
+                return 0x200 + i;
+            }
+
+        }
+
+        const unsigned biv = idx_b[i] < n32;
+        const u32 b_exp = biv ? table_u32[idx_b[i]] : 0;
+
+        if (b_exp != b[i]) {
+            printf(OUT_PREFIX "Unexpected table lookup gather result %s:%d\n",
+                   __FILE__, __LINE__);
+            return 0x300 + i;
+        }
+    }
+
+    if ((d[0] != 0) | (d[1] != 0) | (d[2] == 0)) {
+        printf(OUT_PREFIX "Bad edge case on lookup table bounds at %s:%d\n",
+               __FILE__, __LINE__);
+        return 0x400;
+    }
+
+    return 0;
+}
+
 int main(int argc, char **argv)
 {
 
     if (test_masked_pointer_vectors()) {
+        printf(OUT_PREFIX "%s FAIL\n", __FILE__);
+        return -1;
+    }
+
+    if (test_vanilla_lookup_tables()) {
         printf(OUT_PREFIX "%s FAIL\n", __FILE__);
         return -1;
     }

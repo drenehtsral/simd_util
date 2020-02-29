@@ -28,21 +28,32 @@ int main(int argc, char **argv)
 
     for (i = 0; i < sizeof(test.z8); i++) test.z8[i] = i;
 
-    debug_print_vec(test.x8, ~2);
-    debug_print_vec(test.y8, ~4);
-    debug_print_vec(test.z8, ~8);
+    FILE *f = fopen("/dev/null", "a+");
 
-    debug_print_vec(test.x16, ~2);
-    debug_print_vec(test.y16, ~4);
-    debug_print_vec(test.z16, ~8);
+    if (f == NULL) {
+        printf(OUT_PREFIX "Cannot open /dev/null, using stdout.\n");
+        f = stdout;
+    }
 
-    debug_print_vec(test.x32, ~2);
-    debug_print_vec(test.y32, ~4);
-    debug_print_vec(test.z32, ~8);
+    debug_fprint_vec(f, test.x8, ~2);
+    debug_fprint_vec(f, test.y8, ~4);
+    debug_fprint_vec(f, test.z8, ~8);
 
-    debug_print_vec(test.x64, ~2);
-    debug_print_vec(test.y64, ~4);
-    debug_print_vec(test.z64, ~8);
+    debug_fprint_vec(f, test.x16, ~2);
+    debug_fprint_vec(f, test.y16, ~4);
+    debug_fprint_vec(f, test.z16, ~8);
+
+    debug_fprint_vec(f, test.x32, ~2);
+    debug_fprint_vec(f, test.y32, ~4);
+    debug_fprint_vec(f, test.z32, ~8);
+
+    debug_fprint_vec(f, test.x64, ~2);
+    debug_fprint_vec(f, test.y64, ~4);
+    debug_fprint_vec(f, test.z64, ~8);
+
+    if (f != stdout) {
+        fclose(f);
+    }
 
     printf(OUT_PREFIX "%s: PASS\n", __FILE__);
     return 0;

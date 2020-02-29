@@ -30,7 +30,7 @@ void consume_data(const void * const RESTR data, const size_t len)
  */
 void _debug_print_vec(const void *data, const unsigned nlanes,
                       const unsigned lanesize, const char *name,
-                      const unsigned long long mask)
+                      const unsigned long long mask, FILE *fout)
 {
     unsigned i, first = 1;
 
@@ -49,7 +49,7 @@ void _debug_print_vec(const void *data, const unsigned nlanes,
         return;
     }
 
-    printf("%s = {", name);
+    fprintf(fout, "%s = {", name);
 
     for (i = 0; i < nlanes; i++) {
         if (!((mask >> i) & 1)) {
@@ -61,20 +61,20 @@ void _debug_print_vec(const void *data, const unsigned nlanes,
 
         switch (lanesize) {
             case 1:
-                printf("%s[%u]=0x%02x", pfx, i, ((const unsigned char *)data)[i]);
+                fprintf(fout, "%s[%u]=0x%02x", pfx, i, ((const unsigned char *)data)[i]);
                 break;
 
             case 2:
-                printf("%s[%u]=0x%04x", pfx, i, ((const unsigned short *)data)[i]);
+                fprintf(fout, "%s[%u]=0x%04x", pfx, i, ((const unsigned short *)data)[i]);
                 break;
 
             case 4:
-                printf("%s[%u]=0x%08x", pfx, i, ((const unsigned int *)data)[i]);
+                fprintf(fout, "%s[%u]=0x%08x", pfx, i, ((const unsigned int *)data)[i]);
                 break;
 
             case 8:
-                printf("%s[%u]=0x%016llx", pfx, i,
-                       ((const unsigned long long *)data)[i]);
+                fprintf(fout, "%s[%u]=0x%016llx", pfx, i,
+                        ((const unsigned long long *)data)[i]);
                 break;
 
             default:
@@ -82,7 +82,7 @@ void _debug_print_vec(const void *data, const unsigned nlanes,
         }
     }
 
-    printf(" }\n");
+    fprintf(fout, " }\n");
 }
 
 int randomize_data(void * const RESTR data, const size_t len)
