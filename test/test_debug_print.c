@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "../include/simd_util.h"
 
@@ -28,12 +29,19 @@ int main(int argc, char **argv)
 
     for (i = 0; i < sizeof(test.z8); i++) test.z8[i] = i;
 
-    FILE *f = fopen("/dev/null", "a+");
+    FILE *f = NULL;
 
-    if (f == NULL) {
-        printf(OUT_PREFIX "Cannot open /dev/null, using stdout.\n");
-        f = stdout;
+    if (argc >= 2) {
+        if (!strcmp(argv[1], "-")) {
+            f = stdout;
+        } else {
+            f = fopen(argv[1], "w");
+        }
+    } else {
+        f = fopen("/dev/null", "w");
     }
+
+    f = f ? f : stdout;
 
     debug_fprint_vec(f, test.x8, ~2);
     debug_fprint_vec(f, test.y8, ~4);

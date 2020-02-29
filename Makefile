@@ -37,6 +37,13 @@ show_sde_cmd:
 
 CFLAGS = -g -Wall $(TUNE_$(TARGET)) $(OPTS_$(TARGET)) $(CFLAGS_BASE)
 
+# This lets the caller pass a command line option to every test case executable under
+# the 'test' target.  This is only *currently* useful to pass a '-' to test_debug_print
+# to make the values actually get emitted to stdout rather than shunted to /dev/null.
+# Someday, with a more featureful / less janky test framework there may be common
+# options like --verbose or whatever that apply to the tests in general.
+TEST_ARGS ?=
+
 test_srcs = test/*.c
 
 base_objs = src/base_util.o
@@ -57,7 +64,7 @@ test: $(base_objs) $(test_srcs)
 	@set -e pipefail
 	@for f in $(filter-out $(base_objs),$^); do
 	@    $(CC) $(CFLAGS) -o test/a.out $(base_objs) $$f || exit $$?
-	@    $(SDE_CMD) test/a.out || exit $$?
+	@    $(SDE_CMD) test/a.out $(TEST_ARGS) || exit $$?
 	@    rm -f test/a.out;
 	@done
 	@echo "All tests PASS."
@@ -66,6 +73,7 @@ test: $(base_objs) $(test_srcs)
 clean:
 	@echo "Cleaning."
 	@rm -f src/*.o
+	@rm -f a.out test/a.out
 	
 style:
 	find . -type f -name "*.[ch]" | xargs astyle $(ASTYLE_OPTS)
