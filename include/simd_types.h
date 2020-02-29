@@ -75,4 +75,23 @@ typedef _SIMD_TYPE_BY_LANE(f64, 2)      f64_2;
 typedef _SIMD_TYPE_BY_LANE(f64, 4)      f64_4;
 typedef _SIMD_TYPE_BY_LANE(f64, 8)      f64_8;
 
+/*
+ * gcc 9.2.0 seems to do this operation in an ass-backwards way (using five single-cycle
+ * instructions where one would do) so it may be worth replacing this with one of those
+ * god-awful page-full-of-macro-to-generate-one-instruction constructs...
+ */
+#define CONV_VECTOR(_v, _t) __builtin_convertvector((_v), _t)
+
+/*
+ * On the other hand, the __buitin_has_attribute() construct is way cool!
+ */
+#define IS_CONST(_e)        __builtin_has_attribute((_e), const)
+#define IS_VEC_LEN(_e, _l)  __builtin_has_attribute((_e), vector_size(_l))
+
+/*
+ * Various common uses of __builtin_types_compatible_p()
+ */
+#define EXPR_MATCHES_TYPE(_e, _t)  __builtin_types_compatible_p(typeof(_e), _t)
+#define EXPR_TYPES_MATCH(_e0, _e1) __builtin_types_compatible_p(typeof(_e0), typeof(_e1))
+
 #endif /* _SIMD_TYPES_H_ */

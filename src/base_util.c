@@ -22,11 +22,6 @@ void consume_data(const void * const RESTR data, const size_t len)
      */
 }
 
-__mmask16 barfola(const u32_16 a, const u32_16 b, const u32_16 c)
-{
-    return lookup_1024_bit_x16(a, b, c);
-}
-
 /*
  * This is a quick and dirty universal masked-vector-printing function,
  * It is not intended to be particularly efficient or fancy, but for

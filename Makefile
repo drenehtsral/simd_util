@@ -53,10 +53,12 @@ base: $(base_objs)
 .ONESHELL: test
 test: $(base_objs) $(test_srcs)
 	@echo "Starting tests using \"$(SDE_CMD)\" to run tests:"
+	@rm -f test/a.out
 	@set -e pipefail
 	@for f in $(filter-out $(base_objs),$^); do
-	@    $(CC) $(CFLAGS) -o test/a.out $(base_objs) $$f
-	@    $(SDE_CMD) test/a.out && rm -f test/a.out;
+	@    $(CC) $(CFLAGS) -o test/a.out $(base_objs) $$f || exit $$?
+	@    $(SDE_CMD) test/a.out || exit $$?
+	@    rm -f test/a.out;
 	@done
 	@echo "All tests PASS."
 
