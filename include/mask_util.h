@@ -1,17 +1,12 @@
 #ifndef _MASK_UTIL_H_
 #define _MASK_UTIL_H_
 
-static inline void __attribute__((__error__("Unknown vector size")))
-_mask_util_unknown_vector_size(void)
-{
-    __builtin_unreachable();
-}
+extern int __attribute__((__error__("Unknown vector size"))) _mask_util_unknown_vector_size(void);
 
-static inline void __attribute__((__error__("Unknown lane size")))
-_mask_util_unknown_lane_size(void)
-{
-    __builtin_unreachable();
-}
+extern int __attribute__((__error__("Unknown lane size"))) _mask_util_unknown_lane_size(void);
+
+extern int __attribute__((__error__("Mismatched types for mux/blend"))) _mismatched_types_for_mux(
+        void);
 
 /*
  * Supplied with an input mask (as a scalar) and a vector type this macro
@@ -310,5 +305,125 @@ PURE_FUNC static inline __mmask16 lookup_P2_bit_x16(const u32 * const RESTR tabl
     const u32_16 t1 = t0 << shift;
     return VEC_TO_MASK(t1);
 }
+
+/*
+ * This trivial wrapper around the vpconflictd instruction on zmm regs uses its zero-invalid-lanes form
+ * and then blends the result with the inv_lane_vals input (rather than using the mask-but-don't-zero
+ * form which forms a long dependency chain -- unless the inv_lane_vals input is waiting on a load
+ * from farther away than L2 cache it'll be valid before the result of the vpconflictd instruction
+ * anyway.  If you use the non-zeroing form you have to wait for the two things in series.
+ */
+CONST_FUNC static inline u32_16 conflict_detect_u32_16( const u32_16 data,
+        const u32_16 inv_lane_vals,
+        const __mmask16 lanes)
+{
+    const __m512i t0 = _mm512_maskz_conflict_epi32(lanes, (__m512i)data);
+    const u32_16 t1 = (u32_16)_mm512_mask_blend_epi32(lanes, (__m512i)inv_lane_vals, t0);
+    return t1;
+}
+
+/* Do the same for vpconflictq on zmm regs */
+CONST_FUNC static inline u64_8 conflict_detect_u64_8(   const u64_8 data,
+        const u64_8 inv_lane_vals,
+        const __mmask8 lanes)
+{
+    const __m512i t0 = _mm512_maskz_conflict_epi64(lanes, (__m512i)data);
+    const u64_8 t1 = (u64_8)_mm512_mask_blend_epi64(lanes, (__m512i)inv_lane_vals, t0);
+    return t1;
+}
+
+/* Do the same for vpconflictd on ymm regs */
+CONST_FUNC static inline u32_8 conflict_detect_u32_8(   const u32_8 data,
+        const u32_8 inv_lane_vals,
+        const __mmask8 lanes)
+{
+    const __m256i t0 = _mm256_maskz_conflict_epi32(lanes, (__m256i)data);
+    const u32_8 t1 = (u32_8)_mm256_mask_blend_epi32(lanes, (__m256i)inv_lane_vals, t0);
+    return t1;
+}
+
+#define MUX_ON_MASK(_mask, _true, _false)                                                   \
+({                                                                                          \
+    const union {                                                                           \
+        __m128i     x;                                                                      \
+        __m256i     y;                                                                      \
+        __m512i     z;                                                                      \
+        typeof(_true) in;                                                                   \
+    } _t_case = { .in = (_true)};                                                           \
+                                                                                            \
+    const union {                                                                           \
+        __m128i     x;                                                                      \
+        __m256i     y;                                                                      \
+        __m512i     z;                                                                      \
+        typeof(_false) in;                                                                  \
+    } _f_case = { .in = (_false)};                                                          \
+                                                                                            \
+    const union {                                                                           \
+        __mmask8    m8;                                                                     \
+        __mmask16   m16;                                                                    \
+        __mmask32   m32;                                                                    \
+        __mmask64   m64;                                                                    \
+        typeof(_mask) in;                                                                   \
+    } _m_in = { .in = (_mask) };                                                            \
+                                                                                            \
+    union {                                                                                 \
+        __m128i     x;                                                                      \
+        __m256i     y;                                                                      \
+        __m512i     z;                                                                      \
+        typeof(_t_case.in) out;                                                             \
+    } _ret = {};                                                                            \
+                                                                                            \
+    if (!EXPR_TYPES_MATCH(_t_case.in, _f_case.in)) {                                        \
+        _mismatched_types_for_mux(); /* Balk if true and false types don't match. */        \
+    } else {                                                                                \
+                                                                                            \
+        if (IS_VEC_LEN(_ret.out, 16)) {                                                     \
+            /* Handle XMM register blends. */                                               \
+            if (IS_LANE_SIZE(_ret.out, 1)) {                                                \
+                _ret.x = _mm_mask_blend_epi8(_m_in.m16, _f_case.x, _t_case.x);              \
+            } else if (IS_LANE_SIZE(_ret.out, 2)) {                                         \
+                _ret.x = _mm_mask_blend_epi16(_m_in.m8, _f_case.x, _t_case.x);              \
+            } else if (IS_LANE_SIZE(_ret.out, 4)) {                                         \
+                _ret.x = _mm_mask_blend_epi32(_m_in.m8, _f_case.x, _t_case.x);              \
+            } else if (IS_LANE_SIZE(_ret.out, 8)) {                                         \
+                _ret.x = _mm_mask_blend_epi64(_m_in.m8, _f_case.x, _t_case.x);              \
+            } else {                                                                        \
+                _mask_util_unknown_lane_size();                                             \
+            }                                                                               \
+                                                                                            \
+        } else if (IS_VEC_LEN(_ret.out, 32)) {                                              \
+            /* Handle YMM register blends. */                                               \
+            if (IS_LANE_SIZE(_ret.out, 1)) {                                                \
+                _ret.y = _mm256_mask_blend_epi8(_m_in.m32, _f_case.y, _t_case.y);           \
+            } else if (IS_LANE_SIZE(_ret.out, 2)) {                                         \
+                _ret.y = _mm256_mask_blend_epi16(_m_in.m16, _f_case.y, _t_case.y);          \
+            } else if (IS_LANE_SIZE(_ret.out, 4)) {                                         \
+                _ret.y = _mm256_mask_blend_epi32(_m_in.m8, _f_case.y, _t_case.y);           \
+            } else if (IS_LANE_SIZE(_ret.out, 8)) {                                         \
+                _ret.y = _mm256_mask_blend_epi64(_m_in.m8, _f_case.y, _t_case.y);           \
+            } else {                                                                        \
+                _mask_util_unknown_lane_size();                                             \
+            }                                                                               \
+                                                                                            \
+        } else if (IS_VEC_LEN(_ret.out, 64)) {                                              \
+            /* Handle ZMM register blends. */                                               \
+            if (IS_LANE_SIZE(_ret.out, 1)) {                                                \
+                _ret.z = _mm512_mask_blend_epi8(_m_in.m64, _f_case.z, _t_case.z);           \
+            } else if (IS_LANE_SIZE(_ret.out, 2)) {                                         \
+                _ret.z = _mm512_mask_blend_epi16(_m_in.m32, _f_case.z, _t_case.z);          \
+            } else if (IS_LANE_SIZE(_ret.out, 4)) {                                         \
+                _ret.z = _mm512_mask_blend_epi32(_m_in.m16, _f_case.z, _t_case.z);          \
+            } else if (IS_LANE_SIZE(_ret.out, 8)) {                                         \
+                _ret.z = _mm512_mask_blend_epi64(_m_in.m8, _f_case.z, _t_case.z);           \
+            } else {                                                                        \
+                _mask_util_unknown_lane_size();                                             \
+            }                                                                               \
+        } else {                                                                            \
+            _mask_util_unknown_vector_size();                                               \
+        }                                                                                   \
+    }                                                                                       \
+    /* Return requested type */                                                             \
+    _ret.out;                                                                               \
+}) /* end of macro */
 
 #endif /* _MASK_UTIL_H_ */

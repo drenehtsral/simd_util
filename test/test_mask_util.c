@@ -97,13 +97,77 @@ static int test_bit_table_lookup()
     return 0;
 }
 
+#define _TEST_MUX_BLEND(_type, _tstr, _file, _line)                                             \
+({                                                                                              \
+    const _type out = MUX_ON_MASK(in_mask.m64, in_true._type, in_false._type);                  \
+    const unsigned nlanes = VEC_LANES(out);                                                     \
+    const u64 mask_mask = (~0UL) >> (64 - nlanes);                                              \
+    const u64 mout = VEC_TO_MASK(out) & mask_mask;                                              \
+    if ((mout ^ in_mask.u64) & mask_mask) {                                                     \
+        printf(OUT_PREFIX "Unexpected blend results for MUX_ON_MASK() with type %s. (%s:%d)\n", \
+                _tstr, _file, _line);                                                           \
+        debug_print_vec(in_true._type, ~0);                                                     \
+        debug_print_vec(in_false._type, ~0);                                                    \
+        debug_print_vec(out, ~0);                                                               \
+        printf("Mask in: %#20lx  Mask out: %#20lx\n", in_mask.u64 & mask_mask, mout);           \
+        return 1;                                                                               \
+    }                                                                                           \
+}) /* end of macro */
+
+#define TEST_MUX_BLEND(__type) _TEST_MUX_BLEND(__type, #__type, __FILE__, __LINE__)
+
+static int test_mux_blend(void)
+{
+    const union {
+        __mmask8    m8;
+        __mmask16   m16;
+        __mmask32   m32;
+        __mmask64   m64;
+        u64         u64;
+    } in_mask = { .m64 = 0xdeadbeef15f00d11UL };
+
+    MEGA_UNION in_true, in_false;
+
+    unsigned i;
+
+    for (i = 0; i < sizeof(in_true); i++) {
+        in_false.u8[i] = i & 0xFF;
+        in_true.u8[i] = ~i & 0xFF;
+    }
+
+    TEST_MUX_BLEND(u8_16);
+    TEST_MUX_BLEND(u8_32);
+    TEST_MUX_BLEND(u8_64);
+
+    TEST_MUX_BLEND(u16_8);
+    TEST_MUX_BLEND(u16_16);
+    TEST_MUX_BLEND(u16_32);
+
+    TEST_MUX_BLEND(u32_4);
+    TEST_MUX_BLEND(u32_8);
+    TEST_MUX_BLEND(u32_16);
+
+    TEST_MUX_BLEND(u64_2);
+    TEST_MUX_BLEND(u64_4);
+    TEST_MUX_BLEND(u64_8);
+
+    TEST_MUX_BLEND(f32_4);
+    TEST_MUX_BLEND(f32_8);
+    TEST_MUX_BLEND(f32_16);
+
+    TEST_MUX_BLEND(f64_2);
+    TEST_MUX_BLEND(f64_4);
+    TEST_MUX_BLEND(f64_8);
+    return 0;
+}
+
 int main(int argc, char **argv)
 {
     const union {
-        unsigned long long m64;
-        unsigned       m32;
-        unsigned short     m16;
-        unsigned char      m8;
+        unsigned long long  m64;
+        unsigned            m32;
+        unsigned short      m16;
+        unsigned char       m8;
     } in = { .m64 =  0xfedcba9876543211ULL };
 
 
@@ -139,6 +203,11 @@ int main(int argc, char **argv)
     INDEX_TEST(u64_2);
 
     if (test_bit_table_lookup()) {
+        printf(OUT_PREFIX "%s FAIL!\n", __FILE__);
+        return 1;
+    }
+
+    if (test_mux_blend()) {
         printf(OUT_PREFIX "%s FAIL!\n", __FILE__);
         return 1;
     }

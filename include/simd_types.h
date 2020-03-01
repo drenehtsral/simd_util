@@ -88,6 +88,8 @@ typedef _SIMD_TYPE_BY_LANE(f64, 8)      f64_8;
 #define IS_CONST(_e)        __builtin_has_attribute((_e), const)
 #define IS_VEC_LEN(_e, _l)  __builtin_has_attribute((_e), vector_size(_l))
 
+#define IS_LANE_SIZE(_e, _l) (sizeof((_e)[0]) == (_l))
+
 /*
  * Various common uses of __builtin_types_compatible_p()
  */
@@ -99,5 +101,120 @@ typedef _SIMD_TYPE_BY_LANE(f64, 8)      f64_8;
  * like lookups in bit vectors, etc.
  */
 #define BIT_SIZE(_e) (sizeof(_e) * 8)
+
+typedef union {
+    u8_16           u8_16;
+    u8_32           u8_32;
+    u8_64           u8_64;
+
+    u16_8           u16_8;
+    u16_16          u16_16;
+    u16_32          u16_32;
+
+    u32_4           u32_4;
+    u32_8           u32_8;
+    u32_16          u32_16;
+
+    u64_2           u64_2;
+    u64_4           u64_4;
+    u64_8           u64_8;
+
+    i8_16           i8_16;
+    i8_32           i8_32;
+    i8_64           i8_64;
+
+    i16_8           i16_8;
+    i16_16          i16_16;
+    i16_32          i16_32;
+
+    i32_4           i32_4;
+    i32_8           i32_8;
+    i32_16          i32_16;
+
+    i64_2           i64_2;
+    i64_4           i64_4;
+    i64_8           i64_8;
+
+    f32_4           f32_4;
+    f32_8           f32_8;
+    f32_16          f32_16;
+
+    f64_2           f64_2;
+    f64_4           f64_4;
+    f64_8           f64_8;
+
+    __m512i         __m512i[0];
+    __m256i         __m256i[0];
+    __m128i         __m128i[0];
+    u8              u8 [0];
+    u16             u16[0];
+    u32             u32[0];
+    u64             u64[0];
+    i8              i8 [0];
+    i16             i16[0];
+    i32             i32[0];
+    i64             i64[0];
+    f32             f32[0];
+    f64             f64[0];
+} MEGA_UNION;
+
+#define MEGA_UNION_WITH(_t...)      \
+union {                             \
+    u8_16           u8_16;          \
+    u8_32           u8_32;          \
+    u8_64           u8_64;          \
+                                    \
+    u16_8           u16_8;          \
+    u16_16          u16_16;         \
+    u16_32          u16_32;         \
+                                    \
+    u32_4           u32_4;          \
+    u32_8           u32_8;          \
+    u32_16          u32_16;         \
+                                    \
+    u64_2           u64_2;          \
+    u64_4           u64_4;          \
+    u64_8           u64_8;          \
+                                    \
+    i8_16           i8_16;          \
+    i8_32           i8_32;          \
+    i8_64           i8_64;          \
+                                    \
+    i16_8           i16_8;          \
+    i16_16          i16_16;         \
+    i16_32          i16_32;         \
+                                    \
+    i32_4           i32_4;          \
+    i32_8           i32_8;          \
+    i32_16          i32_16;         \
+                                    \
+    i64_2           i64_2;          \
+    i64_4           i64_4;          \
+    i64_8           i64_8;          \
+                                    \
+    f32_4           f32_4;          \
+    f32_8           f32_8;          \
+    f32_16          f32_16;         \
+                                    \
+    f64_2           f64_2;          \
+    f64_4           f64_4;          \
+    f64_8           f64_8;          \
+                                    \
+    __m512i         __m512i[0];     \
+    __m256i         __m256i[0];     \
+    __m128i         __m128i[0];     \
+    u8              u8 [0];         \
+    u16             u16[0];         \
+    u32             u32[0];         \
+    u64             u64[0];         \
+    i8              i8 [0];         \
+    i16             i16[0];         \
+    i32             i32[0];         \
+    i64             i64[0];         \
+    f32             f32[0];         \
+    f64             f64[0];         \
+    /* User component */            \
+    _t                    ;         \
+} /*end of macro */
 
 #endif /* _SIMD_TYPES_H_ */
