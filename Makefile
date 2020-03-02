@@ -1,7 +1,7 @@
 
 .PHONY: test clean style flush_turds base show_sde_cmd
 
-TARGET ?= icl
+TARGET ?= cnl
 
 CC=gcc
 SDE ?= sde64
