@@ -3,7 +3,7 @@
 
 #include "simd_types.h"
 
-#define TSC_PRECISE() ({int tmp=0; (unsigned long long)__rdtscp(&tmp); })
+#define TSC_PRECISE() ({unsigned tmp=0; (unsigned long long)__builtin_ia32_rdtscp(&tmp); })
 #define TSC_SLOPPY()  ((unsigned long long)__builtin_ia32_rdtsc())
 
 #define OPT_SIZE __attribute__((__optimize__("Os")))

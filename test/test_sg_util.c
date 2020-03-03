@@ -50,7 +50,7 @@ static foo_struct_t * setup_data(unsigned n)
     return ptr;
 }
 
-#define LOOPS (1U << 13)
+#define LOOPS (1U << 14)
 
 static const u64 barfola = 0xDEADBEEFDEADBEEFUL;
 
@@ -212,6 +212,38 @@ static int test_vanilla_lookup_tables(void)
     return 0;
 }
 
+simd_byte_translation_table byte_table = {};
+
+static int test_byte_translation(void)
+{
+    u8_64 in;
+
+    if (randomize_data(&in, sizeof(in))) {
+        return -1;
+    }
+
+    unsigned i;
+
+    for (i = 0; i < 256; i++) {
+        byte_table.u8[i] = ~i & 0xFF;
+    }
+
+    const u8_64 out = translate_bytes_x64(in, &byte_table);
+    const __mmask64 err = VEC_TO_MASK(out != ~in);
+
+    if (err) {
+        printf(OUT_PREFIX "Unexpected byte translation results at %s:%d\n",
+               __FILE__, __LINE__);
+        printf(OUT_PREFIX);
+        debug_print_vec(in, err);
+        printf(OUT_PREFIX);
+        debug_print_vec(out, err);
+        return -1;
+    }
+
+    return 0;
+}
+
 int main(int argc, char **argv)
 {
 
@@ -221,6 +253,11 @@ int main(int argc, char **argv)
     }
 
     if (test_vanilla_lookup_tables()) {
+        printf(OUT_PREFIX "%s FAIL\n", __FILE__);
+        return -1;
+    }
+
+    if (test_byte_translation()) {
         printf(OUT_PREFIX "%s FAIL\n", __FILE__);
         return -1;
     }
