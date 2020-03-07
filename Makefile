@@ -50,6 +50,7 @@ show_sde_cmd:
 test_srcs = test/*.c
 
 base_objs = src/base_util.o
+jig_objs = perf_jig/perf_jig_main.o
 
 # While I _could_ make an auto-deps mechanism for the one or two
 # object files so that touching the headers would make it rebuild
@@ -74,9 +75,12 @@ test: $(base_objs) $(test_srcs)
 
 clean:
 	@echo "Cleaning."
-	@rm -f src/*.o
-	@rm -f a.out test/a.out
-	
+	@rm -f src/*.o perf_jig/*.o
+	@rm -f a.out test/a.out jig
+
+jig: $(base_objs) $(jig_objs)
+	$(CC) $(CFLAGS) -o jig $(base_objs) $(jig_objs)
+
 style:
 	find . -type f -name "*.[ch]" | xargs astyle $(ASTYLE_OPTS)
 

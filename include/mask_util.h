@@ -199,7 +199,7 @@ static const union {
     } _tmp = {};                                                \
                                                                 \
     if (sizeof(_tmp.out) == 16) {                               \
-        /* XMM register --> Mask */                             \
+        /* lane_nums --> XMM register */                        \
         if (sizeof(_tmp.out[0]) == 1) {                         \
             _tmp.x = __idx_u8_union.x;                          \
         } else if (sizeof(_tmp.out[0]) == 2) {                  \
@@ -213,7 +213,7 @@ static const union {
             _mask_util_unknown_lane_size();                     \
         }                                                       \
     } else if (sizeof(_tmp.out) == 32) {                        \
-        /* YMM register --> Mask */                             \
+        /* lane_nums --> YMM register */                        \
         if (sizeof(_tmp.out[0]) == 1) {                         \
             _tmp.y = __idx_u8_union.y;                          \
         } else if (sizeof(_tmp.out[0]) == 2) {                  \
@@ -227,7 +227,7 @@ static const union {
             _mask_util_unknown_lane_size();                     \
         }                                                       \
     } else if (sizeof(_tmp.out) == 64) {                        \
-        /* ZMM register --> Mask */                             \
+        /* lane_nums --> ZMM register */                        \
         if (sizeof(_tmp.out[0]) == 1) {                         \
             _tmp.z = __idx_u8_union.z;                          \
         } else if (sizeof(_tmp.out[0]) == 2) {                  \
@@ -236,6 +236,66 @@ static const union {
             _tmp.z = _mm512_cvtepu8_epi32(__idx_u8_union.x);    \
         } else if (sizeof(_tmp.out[0]) == 8) {                  \
             _tmp.z = _mm512_cvtepu8_epi64(__idx_u8_union.x);    \
+        } else {                                                \
+            /* error case -- unknown lane size */               \
+            _mask_util_unknown_lane_size();                     \
+        }                                                       \
+    } else {                                                    \
+        /* error case -- unknown vector size */                 \
+        _mask_util_unknown_vector_size();                       \
+    }                                                           \
+    /* Return resulting index vector */                         \
+    _tmp.out;                                                   \
+}) /* end of macro */
+
+#define IDX_VEC_CUSTOM(_type, _vals...)                         \
+({                                                              \
+    static const typeof(__idx_u8_union) _in = {.u8 = {_vals}};  \
+    union {                                                     \
+        __m128i x;                                              \
+        __m256i y;                                              \
+        __m512i z;                                              \
+        _type out;                                              \
+    } _tmp = {};                                                \
+                                                                \
+    if (sizeof(_tmp.out) == 16) {                               \
+        /* lane_nums --> XMM register */                        \
+        if (sizeof(_tmp.out[0]) == 1) {                         \
+            _tmp.x = _in.x;                                     \
+        } else if (sizeof(_tmp.out[0]) == 2) {                  \
+            _tmp.x = _mm_cvtepu8_epi16(_in.x);                  \
+        } else if (sizeof(_tmp.out[0]) == 4) {                  \
+            _tmp.x = _mm_cvtepu8_epi32(_in.x);                  \
+        } else if (sizeof(_tmp.out[0]) == 8) {                  \
+            _tmp.x = _mm_cvtepu8_epi64(_in.x);                  \
+        } else {                                                \
+            /* error case -- unknown lane size */               \
+            _mask_util_unknown_lane_size();                     \
+        }                                                       \
+    } else if (sizeof(_tmp.out) == 32) {                        \
+        /* lane_nums --> YMM register */                        \
+        if (sizeof(_tmp.out[0]) == 1) {                         \
+            _tmp.y = _in.y;                                     \
+        } else if (sizeof(_tmp.out[0]) == 2) {                  \
+            _tmp.y = _mm256_cvtepu8_epi16(_in.x);               \
+        } else if (sizeof(_tmp.out[0]) == 4) {                  \
+            _tmp.y = _mm256_cvtepu8_epi32(_in.x);               \
+        } else if (sizeof(_tmp.out[0]) == 8) {                  \
+            _tmp.y = _mm256_cvtepu8_epi64(_in.x);               \
+        } else {                                                \
+            /* error case -- unknown lane size */               \
+            _mask_util_unknown_lane_size();                     \
+        }                                                       \
+    } else if (sizeof(_tmp.out) == 64) {                        \
+        /* lane_nums --> ZMM register */                        \
+        if (sizeof(_tmp.out[0]) == 1) {                         \
+            _tmp.z = _in.z;                                     \
+        } else if (sizeof(_tmp.out[0]) == 2) {                  \
+            _tmp.z = _mm512_cvtepu8_epi16(_in.y);               \
+        } else if (sizeof(_tmp.out[0]) == 4) {                  \
+            _tmp.z = _mm512_cvtepu8_epi32(_in.x);               \
+        } else if (sizeof(_tmp.out[0]) == 8) {                  \
+            _tmp.z = _mm512_cvtepu8_epi64(_in.x);               \
         } else {                                                \
             /* error case -- unknown lane size */               \
             _mask_util_unknown_lane_size();                     \

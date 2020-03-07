@@ -185,6 +185,13 @@ typedef union {
     u8      u8[256];
 } simd_byte_translation_table;
 
+/*
+ * For each of 64 lanes of u8, select the corresponding entry in a table of 256 u8 values
+ * implemented as four zmm registers where bits 5:0 select a lane and bit 6 selects a set of lanes,
+ * and bit 7 selects whether to use the low or high pair, with the results OR'd together.  This is
+ * equivalent to: for (i=0; i<64; i++) { out[i] = table[in[i]]; } but one such ganged lookup can be
+ * accomplished about once every 5 clock cycles.
+ */
 static inline u8_64 translate_bytes_x64(const u8_64 in,
                                         const simd_byte_translation_table * const RESTR table)
 {
