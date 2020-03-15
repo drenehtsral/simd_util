@@ -81,6 +81,12 @@ if [ ! -d /var/lib/hugetlbfs/user/${USER}/pagesize-2MB ]; then
     sudo hugeadm --create-user-mounts=${USER}
 fi
 
+if [ "$(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor)" != "performance" ]; then
+    echo -n "Setting cpufreq scaling governor to: "
+    sudo sh -c 'echo performance | tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor'
+    echo
+fi
+
 
 if [ ${fail} -gt 0 ]; then
     echo -e "\nEnvironment setup ERROR.\n"

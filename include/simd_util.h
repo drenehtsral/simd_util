@@ -24,4 +24,6 @@
 #include "mask_util.h"
 #include "sg_util.h"
 #include "transpose_util.h"
+#include "hash_util.h"
+
 

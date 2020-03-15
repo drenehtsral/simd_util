@@ -32,7 +32,9 @@ else
 	CFLAGS_BASE = -O3
 endif
 
-CFLAGS = -g -Wall $(TUNE_$(TARGET)) $(OPTS_$(TARGET)) $(CFLAGS_BASE)
+OPTS_ALL = -mpclmul -mpopcnt -mlzcnt -mbmi -mbmi2
+
+CFLAGS = -g -Wall $(TUNE_$(TARGET)) $(OPTS_$(TARGET)) $(OPTS_ALL) $(CFLAGS_BASE)
 
 # This lets the caller pass a command line option to every test case executable under
 # the 'test' target.  This is only *currently* useful to pass a '-' to test_debug_print

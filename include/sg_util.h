@@ -62,6 +62,7 @@ static inline __mmask8 mpv_8_fixup_mask(mpv_8 * const RESTR pv)
     return (__mmask8) (VEC_TO_MASK(t0) ^ 0xFF);
 }
 
+
 #define GATHER_u32_4_FROM_MPV4(_mpv)                    \
 ({                                                      \
     const __m128i __zero = {};                          \
