@@ -49,10 +49,11 @@ show_sde_cmd:
 	@echo -n "sde command is: "
 	@echo $(SDE_CMD)
 
-test_srcs = test/*.c
+test_srcs = $(wildcard test/*.c)
 
 base_objs = src/base_util.o
-jig_objs = perf_jig/perf_jig_main.o
+jig_srcs = $(wildcard perf_jig/*.c)
+jig_objs = $(jig_srcs:.c=.o)
 
 # While I _could_ make an auto-deps mechanism for the one or two
 # object files so that touching the headers would make it rebuild
