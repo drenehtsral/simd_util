@@ -163,6 +163,49 @@ static const pkt_metadata_t flow_key_mask = {
     .proto_flags = ~0U,
 };
 
+/*
+ * XXX: TLDR: Work-in-progress / half-baked idea...
+ *
+ *    This function is all sorts of janky and shouldn't yet be used for anything important.
+ * Eventually, if cleaned up and made more complete and robust, it could be used as a
+ * reference (single lane / non parallel) implementation against which to test a SIMD
+ * parallel packet digestor function for use as part of a SIMD parallel packet processing
+ * state machine.
+ *    Any such implementation intended for real-world use would generally differ in a couple
+ * of important ways however (the specifics of which would depend entirely on the use case
+ * itself).  The general gist of these difference would be:
+ *    == It's likely that the network adaptor would be used to perform some parsing, validation,
+ *       and steering including:
+ *      = Extracting fields from the packet headers into the packet descriptor on Rx.
+ *      = Checksum validation for L2-->L4
+ *      = Packet steering by some sort of hash (at the least) or potentially hash + listener.
+ *    == It's likely that an application-specific system could drop (or at least shunt aside to
+ *       a resource-limited slow path) any packets which did not pass a basic sanity check.  For
+ *       example, an application that handled queries submitted via UDP and replied via UDP
+ *       might legitimately shunt ARP, ICMP, TCP, etc. to an exception-path queue.
+ *    == If the application expects to use SIMD parallel processing at some level, and maintains
+ *       coherent state for the traffic it's handling, it may be advantageous to separate traffic
+ *       into independent streams early in the process (either in hardware by hashing flow keys,
+ *       or at a suitably early point in the software processing).  Depending on the application,
+ *       traffic might be separated at different layers, and at different points in the pipeline.
+ *       This can be done as some combination of batching like operations (for improved batch
+ *       coherence) and/or by batching unlike items for reduced lane-to-lane conflicts:
+ *      = By remote host (bin by IP address at packet level)
+ *      = By flow (bin by 5-tuple at packet level)
+ *      = By connection (bin by 5-tuple in either direction at the packet level)
+ *      = By session (bin by some token of session membership higher up the stack).
+ *      = By resource (bin by the nature of the addressed resource higher up the stack).
+ *      = By operation (bin by the nature of the operation requested wherever in the stack this
+ *        divergence can be detected).
+ *    == What it means to "safely" handle any particular packet very much depends on the context of
+ *       the use case, the nature of the data in play, and the threat models resulting.  This shapes
+ *       how each stage of parsing and validation is best considered.
+ *    For these reasons, I wish to remind the reader (and myself) to think carefully about the
+ * use case at hand and what information is critical to parse out and use in deciding how to steer
+ * each packet.  It is also important to ensure that the expected behavior for any arbitrary packet
+ * (including malformed or malicious packets) is well defined and can be reasoned about.  (Even if
+ * it just means shunting them to an exception queue for slow-path processing).
+ */
 int gen_pkt_metadata(const pcap_pkt_hdr_t * const RESTR pph, pkt_metadata_t * const RESTR md)
 {
     const u8 *next = pph->pkt;

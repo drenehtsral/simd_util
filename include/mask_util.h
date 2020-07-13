@@ -165,7 +165,16 @@ extern int __attribute__((__error__("Mismatched types for mux/blend"))) _mismatc
     __mask;                                                 \
 }) /* end of macro */
 
-
+/*
+ *    This single-cache-line constant is useful because it can (using the IDX_VEC macro defined
+ * below) replace in a single instruction what the compiler will otherwise generate as index vectors
+ * of each type for which you need one, for each function in which you need one.  It's silly to
+ * devote an entire cache line of binary space (and cache space) for each function that needs to
+ * generate a constant u64_8 value of {0, 1, 2, 3, 4, 5, 6, 7} for instance.
+ *    Since all such sites can zero-extend this constant out to any lane size and count permutation
+ * it makes more sense to store this once and use it throughout the program rather than constructing
+ * an address to load a distinct constant vector for each place such an index is needed.
+ */
 static const union {
     __m128i x;
     __m256i y;
@@ -180,14 +189,11 @@ static const union {
 };
 
 /*
- * While not *strictly* mask-related this macro to generate one of the
- * many zero-extend-all-lanes instructions allows a single source union
- * (above) to allow quick-and-inexpensive generation of a vector of the
- * form where each lane contains its own lane index.  Otherwise the
- * compiler will happily stick one in the initialized constants secion of
- * each object for each vector type, which is wasteful of cache, and bandwidth
- * (it's silly to store a u64_8 of {0, 1, 2, 3, 4, 5, 6, 7} using 64 bytes
- * of memory when you can store less.
+ * While not *strictly* mask-related this macro to generate one of the many zero-extend-all-lanes
+ * instructions allows a single source union (above) to allow quick-and-inexpensive generation of a
+ * vector of the form where each lane contains its own lane index.  Otherwise the compiler will
+ * happily stick one in the initialized constants secion of each object (or even function) for each
+ * vector type which is wasteful of cache and memory bandwidth.
  */
 #define IDX_VEC(_type)                                          \
 ({                                                              \
@@ -248,6 +254,16 @@ static const union {
     _tmp.out;                                                   \
 }) /* end of macro */
 
+/*
+ * This is really a [slight] generalization of the above, only in that you can give it any u8_64
+ * vector to zero-extend into the specified type.  This can be useful if you need some other pattern
+ * of 8 least significant bits per lane.
+ *
+ * XXX: The compiler is not always smart enough to realize that if your input is only 8 values long
+ * that it doesn't need to allocate an entire u64_8 worth of space, so this macro may actually not
+ * really save you anything over reserving a whole u64_8 after all.  It may get smarter in time
+ * though so encoding this intent may still have value in the long run.
+ */
 #define IDX_VEC_CUSTOM(_type, _vals...)                         \
 ({                                                              \
     static const typeof(__idx_u8_union) _in = {.u8 = {_vals}};  \
@@ -308,6 +324,9 @@ static const union {
     _tmp.out;                                                   \
 }) /* end of macro */
 
+/*
+ * Look up 8 requested bits from a 256 bit table. High bits of idx_in are ignored.
+ */
 CONST_FUNC static inline __mmask8 lookup_256_bit_x8(const u32_8 table, const u32_8 idx_in)
 {
     const u32_8 idx = idx_in & 0xFF;
@@ -318,6 +337,9 @@ CONST_FUNC static inline __mmask8 lookup_256_bit_x8(const u32_8 table, const u32
     return VEC_TO_MASK(t1);
 }
 
+/*
+ * Look up 16 requested bits from a 512 bit table. High bits of idx_in are ignored.
+ */
 CONST_FUNC static inline __mmask16 lookup_512_bit_x16(const u32_16 table, const u32_16 idx_in)
 {
     const u32_16 idx = idx_in & 0x1FF;
@@ -328,6 +350,9 @@ CONST_FUNC static inline __mmask16 lookup_512_bit_x16(const u32_16 table, const 
     return VEC_TO_MASK(t1);
 }
 
+/*
+ * Look up 16 requested bits from a 1024 bit table. High bits of idx_in are ignored.
+ */
 CONST_FUNC static inline __mmask16 lookup_1024_bit_x16(const u32_16 tbl_lo, const u32_16 tbl_hi,
         const u32_16 idx_in)
 {
@@ -339,6 +364,11 @@ CONST_FUNC static inline __mmask16 lookup_1024_bit_x16(const u32_16 tbl_lo, cons
     return VEC_TO_MASK(t1);
 }
 
+/*
+ * Perform 8 parallel bit lookups from a table of tblbits bits (where tblbits % 64 == 0).  For any
+ * lane in idx_in whose value exceeds (tblbits & ~63), 0 will be returned.  The return value of this
+ * function is an 8 bit mask.  (Glomming together the 8 bits from the table specified by idx_in).
+ */
 PURE_FUNC static inline __mmask8 lookup_P2_bit_x8(const u64 * const RESTR table,
         const u64 tblbits, const u64_8 idx_in)
 {
@@ -352,6 +382,11 @@ PURE_FUNC static inline __mmask8 lookup_P2_bit_x8(const u64 * const RESTR table,
     return VEC_TO_MASK(t1);
 }
 
+/*
+ * Perform 16 parallel bit lookups from a table of tblbits bits (where tblbits % 32 == 0).  For any
+ * lane in idx_in whose value exceeds (tblbits & ~31), 0 will be returned.  The return value of this
+ * function is a 16 bit mask.  (Glomming together the 16 bits from the table specified by idx_in).
+ */
 PURE_FUNC static inline __mmask16 lookup_P2_bit_x16(const u32 * const RESTR table,
         const u32 tblbits, const u32_16 idx_in)
 {
@@ -402,6 +437,12 @@ CONST_FUNC static inline u32_8 conflict_detect_u32_8(   const u32_8 data,
     return t1;
 }
 
+/*
+ * This macro is effectively a SIMD multiplexing function not unlike the ?: operation, except
+ * that both the true and false inputs are evaluated unconditionally.  Each lane of the returned
+ * vector will receive the value of the corresponding lane from either the _true or _false input
+ * depending on the corresponding bit from the mask input.
+ */
 #define MUX_ON_MASK(_mask, _true, _false)                                                   \
 ({                                                                                          \
     const union {                                                                           \
