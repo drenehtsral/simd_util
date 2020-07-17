@@ -436,6 +436,78 @@ CONST_FUNC static inline u32_8 conflict_detect_u32_8(   const u32_8 data,
     const u32_8 t1 = (u32_8)_mm256_mask_blend_epi32(lanes, (__m256i)inv_lane_vals, t0);
     return t1;
 }
+/*
+ * This function is a greedy (limited look-ahead) batch scheduling function for dispatching
+ * batches of work in situations where there is a read-modify-write component such that it is
+ * much more efficient to process work items in parallel if you know in advance that no two
+ * work items in a batch refer to the same state machine instance.  This function swizzles
+ * work items identified by hash (erring on the side of caution) and similarly swizzles
+ * a second array (posn) used for (for instance) keeping track of the position in an input
+ * FIFO of the event to be processed.
+ *
+ * The basic approach is to examine the first 16 items in the queue for hash collisions in an
+ * attempt to assemble a batch of 8 without.  Any non-colliding items will be packed to the
+ * beginning of the queue (preserving order within the set of non-colliding items) and any
+ * colliding items will be packed to immediately after the last non-colliding item (maintaining
+ * order within the set of colliding items) and the function will return the number of non-colliding
+ * items that may be concurrently processed (up to 8).
+ *
+ * Within the subset defined by any given hash value (e.g. hash == 1234) order is maintained so that
+ * events targeting the state machine instances assigned to any given hash will be processed in
+ * order with respect to one another even if they are re-ordered with respect to the events for
+ * other instances.
+ *
+ * Example:
+ * u32 posn[max_n];
+ * u32 hash[max_n];
+ * u32 n = get_some_events(hash, posn, max_n);
+ * for (i = 0; i < n; ) {
+ *     const int batch_n = schedule_batch(hash + i, posn + i, n - i);
+ *     const __mmask8 k = (1 << batch_n) - 1;
+ *     process_event_x8(events, hash + i, posn + i, k);
+ *     i += batch_n;
+ * }
+ *
+ * Using this algorithm can have the effect of punting some events down the line if there are long
+ * runs of contiguous hash collisions (e.g. A,A,A,A,B,C,D,E, ... where the 4th A will be processed
+ * on the 4th batch (in order among the A subset, but far out of order with respect of other hashes)
+ * so it's recommended to set an upper limit beyond which to flush straggling small batches of
+ * deferred conflicts (e.g. break off N events, schedule them and execute until they're all done,
+ * then break off another N events to keep from deferring long runs too far forward).
+ */
+static inline int schedule_batch(u32 * const RESTR hash, u32 * const RESTR posn, const u32 extent)
+{
+    // Constrain the extent to one 16-lane vector (a lookahead of 2x the 8-lane target)
+    const u32 etmp = (extent < 16) ? extent : 16;
+    const __mmask16 em = (1U << etmp) - 1;
+    // Load the head chunk of both hash and position queues, careful re: extent
+    const u32_16 h0 = (u32_16)_mm512_maskz_loadu_epi32(em, hash);
+    const u32_16 p0 = (u32_16)_mm512_maskz_loadu_epi32(em, posn);
+    // Compute conflict detection across the hashes in that chunk
+    const u32_16 t0 = (u32_16)_mm512_maskz_conflict_epi32(em, (__m512i)h0);
+    const u32_16 zero = {};
+    const u32_16 idxvec = IDX_VEC(u32_16);
+    // Extract a mask of non-conflicting lanes to pack to the head
+    const __mmask16 m0 = _mm512_mask_cmpeq_epi32_mask(em, (__m512i)t0, (__m512i)zero);
+    // And count them...
+    const int n_ok = __builtin_popcount(m0);
+    // Pack lane index for non-conflicting lanes to the head (low) end of a vector
+    const u32_16 head = (u32_16)_mm512_maskz_compress_epi32(m0, (__m512i)idxvec);
+    // Similarly pack lane index for conflicting lanes to the head of another vector
+    const u32_16 tail = (u32_16)_mm512_maskz_compress_epi32(~m0, (__m512i)idxvec);
+    // Compute a mask representing the spaces to fill at the end of head
+    const __mmask16 xm = ~((1u << n_ok) - 1);
+    // Append tail to head to yield a swizzle map of the desired rearrangement
+    const u32_16 sw = (u32_16)_mm512_mask_expand_epi32((__m512i)head, xm, (__m512i)tail);
+    // Apply that swizzle map to both the hash and position vectors
+    // and store them back to the arrays from whence they came
+    const u32_16 h1 = (u32_16)_mm512_permutexvar_epi32((__m512i)sw, (__m512i)h0);
+    _mm512_mask_storeu_epi32(hash, em, (__m512i)h1);
+    const u32_16 p1 = (u32_16)_mm512_permutexvar_epi32((__m512i)sw, (__m512i)p0);
+    _mm512_mask_storeu_epi32(posn, em, (__m512i)p1);
+    // Return safe batch size
+    return (n_ok < 8) ? n_ok : 8;
+}
 
 /*
  * This macro is effectively a SIMD multiplexing function not unlike the ?: operation, except
