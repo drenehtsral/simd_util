@@ -97,6 +97,36 @@ static int test_bit_table_lookup()
     return 0;
 }
 
+/*
+ * TODO:  Validate this here for correctness.
+ * Should it be "canned" or evaluative?
+ */
+static int test_schedule_batch(void)
+{
+    u32 hash[18] = {'A', 'B', 'C', 'A', 'D', 'E', 'F', 'G', 'B', 'H', 'I', 'J', 'A', 'K', 'C', 'D', 'L', 'M'};
+    u32 posn[18] = {};
+    const unsigned n = sizeof(posn) / sizeof(posn[0]);
+    unsigned i, j;
+
+    for (i = 0; i < n; i++) {
+        posn[i] = i;
+    }
+
+    for (i = 0; i < n; )
+    {
+        const int n_batch = schedule_batch(hash + i, posn + i, n - i);
+
+        for (j = 0; j < n_batch; j++) {
+            printf(" %u:%c", posn[j + i], hash[j + i] & 0xFF);
+        }
+
+        printf("\n");
+        i += n_batch;
+    }
+
+    return 0;
+}
+
 #define _TEST_MUX_BLEND(_type, _tstr, _file, _line)                                             \
 ({                                                                                              \
     const _type out = MUX_ON_MASK(in_mask.m64, in_true._type, in_false._type);                  \
@@ -208,6 +238,11 @@ int main(int argc, char **argv)
     }
 
     if (test_mux_blend()) {
+        printf(OUT_PREFIX "%s FAIL!\n", __FILE__);
+        return 1;
+    }
+
+    if (test_schedule_batch()) {
         printf(OUT_PREFIX "%s FAIL!\n", __FILE__);
         return 1;
     }
