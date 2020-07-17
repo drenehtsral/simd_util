@@ -467,37 +467,45 @@ CONST_FUNC static inline u32_8 conflict_detect_u32_8(   const u32_8 data,
  *     process_event_x8(events, hash + i, posn + i, k);
  *     i += batch_n;
  * }
+ *
+ * Using this algorithm can have the effect of punting some events down the line if there are long
+ * runs of contiguous hash collisions (e.g. A,A,A,A,B,C,D,E, ... where the 4th A will be processed
+ * on the 4th batch (in order among the A subset, but far out of order with respect of other hashes)
+ * so it's recommended to set an upper limit beyond which to flush straggling small batches of
+ * deferred conflicts (e.g. break off N events, schedule them and execute until they're all done,
+ * then break off another N events to keep from deferring long runs too far forward).
  */
 static inline int schedule_batch(u32 * const RESTR hash, u32 * const RESTR posn, const u32 extent)
 {
+    // Constrain the extent to one 16-lane vector (a lookahead of 2x the 8-lane target)
     const u32 etmp = (extent < 16) ? extent : 16;
     const __mmask16 em = (1U << etmp) - 1;
+    // Load the head chunk of both hash and position queues, careful re: extent
     const u32_16 h0 = (u32_16)_mm512_maskz_loadu_epi32(em, hash);
     const u32_16 p0 = (u32_16)_mm512_maskz_loadu_epi32(em, posn);
+    // Compute conflict detection across the hashes in that chunk
     const u32_16 t0 = (u32_16)_mm512_maskz_conflict_epi32(em, (__m512i)h0);
     const u32_16 zero = {};
     const u32_16 idxvec = IDX_VEC(u32_16);
+    // Extract a mask of non-conflicting lanes to pack to the head
     const __mmask16 m0 = _mm512_mask_cmpeq_epi32_mask(em, (__m512i)t0, (__m512i)zero);
+    // And count them...
     const int n_ok = __builtin_popcount(m0);
+    // Pack lane index for non-conflicting lanes to the head (low) end of a vector
     const u32_16 head = (u32_16)_mm512_maskz_compress_epi32(m0, (__m512i)idxvec);
+    // Similarly pack lane index for conflicting lanes to the head of another vector
     const u32_16 tail = (u32_16)_mm512_maskz_compress_epi32(~m0, (__m512i)idxvec);
+    // Compute a mask representing the spaces to fill at the end of head
     const __mmask16 xm = ~((1u << n_ok) - 1);
+    // Append tail to head to yield a swizzle map of the desired rearrangement
     const u32_16 sw = (u32_16)_mm512_mask_expand_epi32((__m512i)head, xm, (__m512i)tail);
+    // Apply that swizzle map to both the hash and position vectors
+    // and store them back to the arrays from whence they came
     const u32_16 h1 = (u32_16)_mm512_permutexvar_epi32((__m512i)sw, (__m512i)h0);
-    const u32_16 p1 = (u32_16)_mm512_permutexvar_epi32((__m512i)sw, (__m512i)p0);
-    /*
-        debug_print_vec(h0, em);
-        debug_print_vec(p0, em);
-        debug_print_vec(t0, em);
-        debug_print_vec(head, ~0);
-        debug_print_vec(tail, ~0);
-        debug_print_vec(sw, em);
-        debug_print_vec(h1, em);
-        debug_print_vec(p1, em);
-    */
     _mm512_mask_storeu_epi32(hash, em, (__m512i)h1);
+    const u32_16 p1 = (u32_16)_mm512_permutexvar_epi32((__m512i)sw, (__m512i)p0);
     _mm512_mask_storeu_epi32(posn, em, (__m512i)p1);
-
+    // Return safe batch size
     return (n_ok < 8) ? n_ok : 8;
 }
 
