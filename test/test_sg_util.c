@@ -244,6 +244,61 @@ static int test_byte_translation(void)
     return 0;
 }
 
+/*
+ * XXX: This doesn't completely cover the scatter/gather to/from struct macros that wrap the
+ * generation of those instructions but since they're largely cookie cutter macros so long as
+ * a representative sample of lane width vs. lane count is tested that's probably OK.  This
+ * function also doesn't test the pathological case where the stores of two lanes in the same
+ * scatter overlap (both happen, the higher lane index is serialized later and "wins", but this
+ * is a slow path case that one generally avoids like the plague anyway).
+ *
+ * It does, however, test having a disabled lane in the mask (lane 5) which is disabled for
+ * both the scatter and gather.
+ */
+static int test_struct_scatter_gather(void)
+{
+    u64_8 inc_baz = IDX_VEC(u64_8);
+    u32_8 inc_foo = -IDX_VEC(u32_8);
+    u32_4 inc_bar = IDX_VEC(u32_4);
+
+    foo_struct_t test_a[8];
+    foo_struct_t test_b[8];
+    mpv_8 p;
+
+    randomize_data(test_a, sizeof(test_a));
+    unsigned i;
+
+    for (i = 0; i < 8; i++) {
+        p.mp[i].p = test_a + i;
+        test_b[i] = test_a[i];
+
+        if (i == 5) {
+            p.mp[i].inv = 1;
+        } else {
+            test_b[i].baz64 += inc_baz[i];
+            test_b[i].foo32 += inc_foo[i];
+        }
+
+        if (i < 4) {
+            test_b[i].bar32 += inc_bar[i];
+        }
+    }
+
+    u64_8 tmp_baz = GATHER_u64_8_FROM_STRUCTS(foo_struct_t, baz64, p) + inc_baz;
+    u32_8 tmp_foo = GATHER_u32_8_FROM_STRUCTS(foo_struct_t, foo32, p) + inc_foo;
+    u32_4 tmp_bar = GATHER_u32_4_FROM_STRUCTS(foo_struct_t, bar32, p.v4[0]) + inc_bar;
+    SCATTER_u64_8_TO_STRUCTS(foo_struct_t, baz64, p, tmp_baz);
+    SCATTER_u32_8_TO_STRUCTS(foo_struct_t, foo32, p, tmp_foo);
+    SCATTER_u32_4_TO_STRUCTS(foo_struct_t, bar32, p.v4[0], tmp_bar);
+
+    if (memcmp(test_a, test_b, sizeof(test_a))) {
+        printf(OUT_PREFIX OUT_PREFIX "Failed comparison in %s.\n", __FUNCTION__);
+        return -1;
+    }
+
+    return 0;
+}
+
 int main(int argc, char **argv)
 {
 
@@ -258,6 +313,11 @@ int main(int argc, char **argv)
     }
 
     if (test_byte_translation()) {
+        printf(OUT_PREFIX "%s FAIL\n", __FILE__);
+        return -1;
+    }
+
+    if (test_struct_scatter_gather()) {
         printf(OUT_PREFIX "%s FAIL\n", __FILE__);
         return -1;
     }
