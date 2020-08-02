@@ -109,6 +109,16 @@ static inline __mmask8 mpv_8_fixup_mask(mpv_8 * const RESTR pv)
             (__m512i)__mpv.vec, __base, 1);                                     \
 }) /* end of macro */
 
+#define SCATTER_u32_8_TO_STRUCTS(_struct, _field, _mpv, _val)                   \
+({                                                                              \
+    const __m256i __val = (__m256i)(_val);                                      \
+    void * __base = (void *) __builtin_offsetof(_struct, _field);               \
+    mpv_8 __mpv = { .vec = (_mpv).vec };                                        \
+    const __mmask8 __mask = mpv_8_fixup_mask(&__mpv);                           \
+    _mm512_mask_i64scatter_epi32(__base, __mask, (__m512i)__mpv.vec,            \
+            __val, 1);                                                          \
+}) /* end of macro */
+
 #define GATHER_u64_8_FROM_STRUCTS(_struct, _field, _mpv)                        \
 ({                                                                              \
     const __m512i __zero = {};                                                  \
@@ -117,6 +127,16 @@ static inline __mmask8 mpv_8_fixup_mask(mpv_8 * const RESTR pv)
     const __mmask8 __mask = mpv_8_fixup_mask(&__mpv);                           \
     (u64_8)_mm512_mask_i64gather_epi64(__zero, __mask,                          \
             (__m512i)__mpv.vec, __base, 1);                                     \
+}) /* end of macro */
+
+#define SCATTER_u64_8_TO_STRUCTS(_struct, _field, _mpv, _val)                   \
+({                                                                              \
+    const __m512i __val = (__m512i)(_val);                                      \
+    void * __base = (void *) __builtin_offsetof(_struct, _field);               \
+    mpv_8 __mpv = { .vec = (_mpv).vec };                                        \
+    const __mmask8 __mask = mpv_8_fixup_mask(&__mpv);                           \
+    _mm512_mask_i64scatter_epi64(__base, __mask, (__m512i)__mpv.vec,            \
+            __val, 1);                                                          \
 }) /* end of macro */
 
 #define GATHER_u32_4_FROM_STRUCTS(_struct, _field, _mpv)                        \
@@ -129,6 +149,16 @@ static inline __mmask8 mpv_8_fixup_mask(mpv_8 * const RESTR pv)
             (__m256i)__mpv.vec, __base, 1);                                     \
 }) /* end of macro */
 
+#define SCATTER_u32_4_TO_STRUCTS(_struct, _field, _mpv, _val)                   \
+({                                                                              \
+    const __m128i __val = (__m128i)(_val);                                      \
+    void * __base = (void *) __builtin_offsetof(_struct, _field);               \
+    mpv_4 __mpv = { .vec = (_mpv).vec };                                        \
+    const __mmask8 __mask = mpv_4_fixup_mask(&__mpv);                           \
+    _mm256_mask_i64scatter_epi32(__base, __mask, (__m256i)__mpv.vec,            \
+            __val, 1);                                                          \
+}) /* end of macro */
+
 #define GATHER_u64_4_FROM_STRUCTS(_struct, _field, _mpv)                        \
 ({                                                                              \
     const __m256i __zero = {};                                                  \
@@ -137,6 +167,16 @@ static inline __mmask8 mpv_8_fixup_mask(mpv_8 * const RESTR pv)
     const __mmask8 __mask = mpv_4_fixup_mask(&__mpv);                           \
     (u64_4)_mm256_mmask_i64gather_epi64(__zero, __mask,                         \
             (__m256i)__mpv.vec, __base, 1);                                     \
+}) /* end of macro */
+
+#define SCATTER_u64_4_TO_STRUCTS(_struct, _field, _mpv, _val)                   \
+({                                                                              \
+    const __m256i __val = (__m256i)(_val);                                      \
+    void * __base = (void *) __builtin_offsetof(_struct, _field);               \
+    mpv_4 __mpv = { .vec = (_mpv).vec };                                        \
+    const __mmask8 __mask = mpv_4_fixup_mask(&__mpv);                           \
+    _mm256_mask_i64scatter_epi64(__base, __mask, (__m256i)__mpv.vec,            \
+            __val, 1);                                                          \
 }) /* end of macro */
 
 /*

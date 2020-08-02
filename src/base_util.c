@@ -119,6 +119,40 @@ int OPT_SIZE randomize_data(void * const RESTR data, const size_t len)
     return 0;
 }
 
+int load_data(void * const RESTR data, const size_t len, const char *fname)
+{
+    const unsigned max_chunk = (1 << 21);
+    char * RESTR trav = (char *)data;
+    size_t left = len;
+
+    int ret;
+    const int fd = open(fname, O_RDONLY);
+
+    if (fd < 0) {
+        return -1;
+    }
+
+    while (left) {
+        const unsigned chunk = (left <= max_chunk) ? left : max_chunk;
+        ret = read(fd, trav, chunk);
+
+        if (ret <= 0) {
+            if ((errno == EINTR) & (ret < 0)) {
+                continue;
+            }
+
+            close(fd);
+            return -1;
+        }
+
+        trav += chunk;
+        left -= chunk;
+    }
+
+    close(fd);
+    return 0;
+}
+
 int OPT_SIZE get_page_size(const char *path)
 {
     struct stat st = {};

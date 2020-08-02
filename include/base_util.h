@@ -52,6 +52,7 @@ typedef struct {
 
 void consume_data(const void * const RESTR data, const size_t len);
 int randomize_data(void * const RESTR data, const size_t len);
+int load_data(void * const RESTR data, const size_t len, const char *fname);
 int get_page_size(const char *path);
 
 int map_segment(const char *path, seg_desc_t *seg, char *errbuf, const unsigned eblen);
