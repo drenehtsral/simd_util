@@ -109,6 +109,16 @@ static inline __mmask8 mpv_8_fixup_mask(mpv_8 * const RESTR pv)
             (__m512i)__mpv.vec, __base, 1);                                     \
 }) /* end of macro */
 
+#define SCATTER_u32_8_TO_STRUCTS(_struct, _field, _mpv, _val)                   \
+({                                                                              \
+    const __m256i __val = (__m256i)(_val);                                      \
+    void * __base = (void *) __builtin_offsetof(_struct, _field);   \
+    mpv_8 __mpv = { .vec = (_mpv).vec };                                        \
+    const __mmask8 __mask = mpv_8_fixup_mask(&__mpv);                           \
+    _mm512_mask_i64scatter_epi32(__base, __mask, (__m512i)__mpv.vec,            \
+            __val, 1);                                                          \
+}) /* end of macro */
+
 #define GATHER_u64_8_FROM_STRUCTS(_struct, _field, _mpv)                        \
 ({                                                                              \
     const __m512i __zero = {};                                                  \
