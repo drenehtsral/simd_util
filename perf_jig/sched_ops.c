@@ -66,6 +66,7 @@ static int perf_test_schedule_batch(const char **args)
 PERF_FUNC_ENTRY(schedule_batch,
                 "Perform batch scheduling operation", "qlen", "modulo");
 
+
 typedef struct {
     u32 last_id;
     i32 balance;
