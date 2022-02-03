@@ -26,15 +26,15 @@ void _debug_print_vec(const void *data, const unsigned nlanes,
 }) /* end of macro */
 
 #define PAGE_SHIFT      (12)
-#define PAGE_SIZE       (1U << PAGE_SHIFT)
+#define PAGE_SIZE       (1UL << PAGE_SHIFT)
 #define PAGE_MASK       (PAGE_SIZE - 1)
 
 #define HUGE_2M_SHIFT   (21)
-#define HUGE_2M_SIZE    (1U << HUGE_2M_SHIFT)
+#define HUGE_2M_SIZE    (1UL << HUGE_2M_SHIFT)
 #define HUGE_2M_MASK    (HUGE_2M_SIZE - 1)
 
 #define HUGE_1G_SHIFT   (30)
-#define HUGE_1G_SIZE    (1U << HUGE_1G_SHIFT)
+#define HUGE_1G_SIZE    (1UL << HUGE_1G_SHIFT)
 #define HUGE_1G_MASK    (HUGE_1G_SIZE - 1)
 
 #define SEG_DESC_INITD          (1 << 0)    // Segment descriptor is pre-initialized
@@ -52,6 +52,7 @@ typedef struct {
 
 void consume_data(const void * const RESTR data, const size_t len);
 int randomize_data(void * const RESTR data, const size_t len);
+int load_data(void * const RESTR data, const size_t len, const char *fname);
 int get_page_size(const char *path);
 
 int map_segment(const char *path, seg_desc_t *seg, char *errbuf, const unsigned eblen);

@@ -97,6 +97,84 @@ static int test_bit_table_lookup()
     return 0;
 }
 
+static inline int validate_non_conflict(const u32 * const RESTR hash, const u32 n)
+{
+    int i, j;
+
+    for (i = 1; i < n; i++) {
+        for (j = 0; j < i; j++) {
+            if (hash[i] == hash[j]) {
+                return -1;
+            }
+        }
+    }
+
+    return 0;
+}
+
+/*
+ * Validate the batch scheduler on fundamental constraints:
+ *      == Each batch it returns must contain no internal conflicts on hash.
+ *      == Every item that appears in the input queue must finally appear in an output batch
+ *      == Positions for any given hash value must remain sorted in the output queue
+ */
+static int test_schedule_batch(void)
+{
+    u32 hash[] = {
+        'A', 'B', 'C', 'A', 'D', 'E', 'F', 'G', 'B', 'H', 'I', 'J', 'A', 'K', 'C', 'D',
+        'L', 'M', 'N', 'B', 'H', 'K'
+    };
+    const unsigned n = sizeof(hash) / sizeof(hash[0]);
+    u32 posn[n];
+    u32 posn_check[n];
+    unsigned i;
+
+    for (i = 0; i < n; i++) {
+        posn[i] = i;
+        posn_check[i] = 0;
+    }
+
+    // Construct batches ensuring that each batch meets non-conflict criteria
+    for (i = 0; i < n; )
+    {
+        const int n_batch = schedule_batch(hash + i, posn + i, n - i);
+
+        CHECK_SANITY(validate_non_conflict(hash + i, n_batch) == 0);
+        i += n_batch;
+    }
+
+    // Tally counts for items in the rearranged queue.
+    for (i = 0; i < n; i++) {
+        posn_check[posn[i]]++;
+    }
+
+    // Ensure each item in the initial queue occurs exactly once in the rearranged queue
+    for (i = 0; i < n; i++) {
+        CHECK_SANITY(posn_check[i] == 1);
+    }
+
+    // Ensure each subset (by hash) remains sorted by position.  i.e. the Nth item with any given
+    // hash will always be assigned to a batch before the (N+1)th item with that same hash.
+    u32 target;
+
+    for (target = 'A'; target <= 'N'; target++) {
+        int prev = -1;
+
+        for (i = 0; i < n; i++) {
+            if (hash[i] == target) {
+                if (prev < 0) {
+                    prev = posn[i];
+                } else {
+                    CHECK_SANITY(prev < posn[i]);
+                    prev = posn[i];
+                }
+            }
+        }
+    }
+
+    return 0;
+}
+
 #define _TEST_MUX_BLEND(_type, _tstr, _file, _line)                                             \
 ({                                                                                              \
     const _type out = MUX_ON_MASK(in_mask.m64, in_true._type, in_false._type);                  \
@@ -208,6 +286,11 @@ int main(int argc, char **argv)
     }
 
     if (test_mux_blend()) {
+        printf(OUT_PREFIX "%s FAIL!\n", __FILE__);
+        return 1;
+    }
+
+    if (test_schedule_batch()) {
         printf(OUT_PREFIX "%s FAIL!\n", __FILE__);
         return 1;
     }

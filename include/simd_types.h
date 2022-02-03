@@ -12,6 +12,8 @@
 #define __STATIC_ASSERT(_line, _cond) ____STATIC_ASSERT(_line, _cond)
 #define STATIC_ASSERT(cond...) __STATIC_ASSERT(__LINE__, (cond))
 
+#define PACKED __attribute__((__packed__))
+
 typedef unsigned char                   u8;
 typedef unsigned short int              u16;
 typedef unsigned int                    u32;

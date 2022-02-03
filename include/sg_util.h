@@ -62,6 +62,7 @@ static inline __mmask8 mpv_8_fixup_mask(mpv_8 * const RESTR pv)
     return (__mmask8) (VEC_TO_MASK(t0) ^ 0xFF);
 }
 
+
 #define GATHER_u32_4_FROM_MPV4(_mpv)                    \
 ({                                                      \
     const __m128i __zero = {};                          \
@@ -108,6 +109,16 @@ static inline __mmask8 mpv_8_fixup_mask(mpv_8 * const RESTR pv)
             (__m512i)__mpv.vec, __base, 1);                                     \
 }) /* end of macro */
 
+#define SCATTER_u32_8_TO_STRUCTS(_struct, _field, _mpv, _val)                   \
+({                                                                              \
+    const __m256i __val = (__m256i)(_val);                                      \
+    void * __base = (void *) __builtin_offsetof(_struct, _field);               \
+    mpv_8 __mpv = { .vec = (_mpv).vec };                                        \
+    const __mmask8 __mask = mpv_8_fixup_mask(&__mpv);                           \
+    _mm512_mask_i64scatter_epi32(__base, __mask, (__m512i)__mpv.vec,            \
+            __val, 1);                                                          \
+}) /* end of macro */
+
 #define GATHER_u64_8_FROM_STRUCTS(_struct, _field, _mpv)                        \
 ({                                                                              \
     const __m512i __zero = {};                                                  \
@@ -116,6 +127,16 @@ static inline __mmask8 mpv_8_fixup_mask(mpv_8 * const RESTR pv)
     const __mmask8 __mask = mpv_8_fixup_mask(&__mpv);                           \
     (u64_8)_mm512_mask_i64gather_epi64(__zero, __mask,                          \
             (__m512i)__mpv.vec, __base, 1);                                     \
+}) /* end of macro */
+
+#define SCATTER_u64_8_TO_STRUCTS(_struct, _field, _mpv, _val)                   \
+({                                                                              \
+    const __m512i __val = (__m512i)(_val);                                      \
+    void * __base = (void *) __builtin_offsetof(_struct, _field);               \
+    mpv_8 __mpv = { .vec = (_mpv).vec };                                        \
+    const __mmask8 __mask = mpv_8_fixup_mask(&__mpv);                           \
+    _mm512_mask_i64scatter_epi64(__base, __mask, (__m512i)__mpv.vec,            \
+            __val, 1);                                                          \
 }) /* end of macro */
 
 #define GATHER_u32_4_FROM_STRUCTS(_struct, _field, _mpv)                        \
@@ -128,6 +149,16 @@ static inline __mmask8 mpv_8_fixup_mask(mpv_8 * const RESTR pv)
             (__m256i)__mpv.vec, __base, 1);                                     \
 }) /* end of macro */
 
+#define SCATTER_u32_4_TO_STRUCTS(_struct, _field, _mpv, _val)                   \
+({                                                                              \
+    const __m128i __val = (__m128i)(_val);                                      \
+    void * __base = (void *) __builtin_offsetof(_struct, _field);               \
+    mpv_4 __mpv = { .vec = (_mpv).vec };                                        \
+    const __mmask8 __mask = mpv_4_fixup_mask(&__mpv);                           \
+    _mm256_mask_i64scatter_epi32(__base, __mask, (__m256i)__mpv.vec,            \
+            __val, 1);                                                          \
+}) /* end of macro */
+
 #define GATHER_u64_4_FROM_STRUCTS(_struct, _field, _mpv)                        \
 ({                                                                              \
     const __m256i __zero = {};                                                  \
@@ -136,6 +167,16 @@ static inline __mmask8 mpv_8_fixup_mask(mpv_8 * const RESTR pv)
     const __mmask8 __mask = mpv_4_fixup_mask(&__mpv);                           \
     (u64_4)_mm256_mmask_i64gather_epi64(__zero, __mask,                         \
             (__m256i)__mpv.vec, __base, 1);                                     \
+}) /* end of macro */
+
+#define SCATTER_u64_4_TO_STRUCTS(_struct, _field, _mpv, _val)                   \
+({                                                                              \
+    const __m256i __val = (__m256i)(_val);                                      \
+    void * __base = (void *) __builtin_offsetof(_struct, _field);               \
+    mpv_4 __mpv = { .vec = (_mpv).vec };                                        \
+    const __mmask8 __mask = mpv_4_fixup_mask(&__mpv);                           \
+    _mm256_mask_i64scatter_epi64(__base, __mask, (__m256i)__mpv.vec,            \
+            __val, 1);                                                          \
 }) /* end of macro */
 
 /*
@@ -178,6 +219,30 @@ static inline u64_8 gather_u64_from_lookup_table_x8(const u32_8 idxvec,
     const u32 minmax = (tsize < MSB32) ? tsize : MSB32;
     const __mmask8 lanes = VEC_TO_MASK(idxvec < minmax);
     return (u64_8)_mm512_mask_i32gather_epi64(zero, lanes, (__m256i)idxvec, table, sizeof(u64));
+}
+
+typedef union {
+    u8_64   reg[4];
+    u8      u8[256];
+} simd_byte_translation_table;
+
+/*
+ * For each of 64 lanes of u8, select the corresponding entry in a table of 256 u8 values
+ * implemented as four zmm registers where bits 5:0 select a lane and bit 6 selects a set of lanes,
+ * and bit 7 selects whether to use the low or high pair, with the results OR'd together.  This is
+ * equivalent to: for (i=0; i<64; i++) { out[i] = table[in[i]]; } but one such ganged lookup can be
+ * accomplished about once every 5 clock cycles.
+ */
+static inline u8_64 translate_bytes_x64(const u8_64 in,
+                                        const simd_byte_translation_table * const RESTR table)
+{
+    const __mmask64 b7 = _mm512_movepi8_mask((__m512i)in);
+    const u8_64 t0 = (u8_64)_mm512_maskz_permutex2var_epi8(_knot_mask64(b7), (__m512i)table->reg[0],
+                     (__m512i)in,
+                     (__m512i)table->reg[1]);
+    const u8_64 t1 = (u8_64)_mm512_maskz_permutex2var_epi8(b7, (__m512i)table->reg[2], (__m512i)in,
+                     (__m512i)table->reg[3]);
+    return t0 | t1;
 }
 
 #endif /* _SG_UTIL_H_ */

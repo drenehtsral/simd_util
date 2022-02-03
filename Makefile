@@ -1,7 +1,7 @@
 
 .PHONY: test test_sde clean style flush_turds base show_sde_cmd
 
-TARGET ?= icl
+TARGET ?= cnl
 
 CC=gcc
 SDE ?= sde64
@@ -32,7 +32,9 @@ else
 	CFLAGS_BASE = -O3
 endif
 
-CFLAGS = -g -Wall $(TUNE_$(TARGET)) $(OPTS_$(TARGET)) $(CFLAGS_BASE)
+OPTS_ALL = -mpclmul -mpopcnt -mlzcnt -mbmi -mbmi2
+
+CFLAGS = -g -Wall $(TUNE_$(TARGET)) $(OPTS_$(TARGET)) $(OPTS_ALL) $(CFLAGS_BASE)
 
 # This lets the caller pass a command line option to every test case executable under
 # the 'test' target.  This is only *currently* useful to pass a '-' to test_debug_print
@@ -47,9 +49,11 @@ show_sde_cmd:
 	@echo -n "sde command is: "
 	@echo $(SDE_CMD)
 
-test_srcs = test/*.c
+test_srcs = $(wildcard test/*.c)
 
 base_objs = src/base_util.o
+jig_srcs = $(wildcard perf_jig/*.c)
+jig_objs = $(jig_srcs:.c=.o)
 
 # While I _could_ make an auto-deps mechanism for the one or two
 # object files so that touching the headers would make it rebuild
@@ -87,9 +91,12 @@ test: $(base_objs) $(test_srcs)
 
 clean:
 	@echo "Cleaning."
-	@rm -f src/*.o
-	@rm -f a.out test/a.out
-	
+	@rm -f src/*.o perf_jig/*.o
+	@rm -f a.out test/a.out jig
+
+jig: $(base_objs) $(jig_objs)
+	$(CC) $(CFLAGS) -o jig $(base_objs) $(jig_objs)
+
 style:
 	find . -type f -name "*.[ch]" | xargs astyle $(ASTYLE_OPTS)
 

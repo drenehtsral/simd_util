@@ -10,6 +10,9 @@ BINUTILS_PATH="${BINUTILS_PATH:-/opt/binutils/bin}"
 GDB_PATH="${GDB_PATH:-/opt/gdb9/bin}"
 SDE_PATH="${SDE_PATH:-/opt/sde}"
 
+WANT_2M_PAGES=${WANT_2M_PAGES:-512}
+WANT_1G_PAGES=${WANT_1G_PAGES:-1}
+
 PATH_COMPS=( "${GCC_PATH}" "${BINUTILS_PATH}" "${GDB_PATH}" "${SDE_PATH}" $(echo "${PATH}" | tr ":" "\n" | egrep -v "^${GCC_PATH}|${BINUTILS_PATH}|${GDB_PATH}|${SDE_PATH}\$"))
 
 export PATH="$(echo "${PATH_COMPS[@]}" | tr " " ":")"
@@ -61,6 +64,29 @@ echo "gcc      version: $(gcc --version | head -n1)"
 echo "binutils version: $(objdump --version | head -n1)"
 echo "gdb      version: $(gdb --version | head -n1)"
 echo "sde64    version: $(sde64 --version | head -n1)"
+
+if [ "${WANT_1G_PAGES}" -gt 0 ]; then
+    if [ -f /sys/kernel/mm/hugepages/hugepages-1048576kB/nr_hugepages ]; then
+        sudo hugeadm --pool-pages-min=1G:${WANT_1G_PAGES}
+    else
+        echo "Skipping 1G pages due to lack of system support."
+    fi
+fi
+
+if [ "${WANT_2M_PAGES}" -gt 0 ]; then
+    sudo hugeadm --pool-pages-min=2M:${WANT_2M_PAGES}
+fi
+
+if [ ! -d /var/lib/hugetlbfs/user/${USER}/pagesize-2MB ]; then
+    sudo hugeadm --create-user-mounts=${USER}
+fi
+
+if [ "$(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor)" != "performance" ]; then
+    echo -n "Setting cpufreq scaling governor to: "
+    sudo sh -c 'echo performance | tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor'
+    echo
+fi
+
 
 if [ ${fail} -gt 0 ]; then
     echo -e "\nEnvironment setup ERROR.\n"

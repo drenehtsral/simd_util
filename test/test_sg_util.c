@@ -50,7 +50,7 @@ static foo_struct_t * setup_data(unsigned n)
     return ptr;
 }
 
-#define LOOPS (1U << 13)
+#define LOOPS (1U << 14)
 
 static const u64 barfola = 0xDEADBEEFDEADBEEFUL;
 
@@ -212,6 +212,93 @@ static int test_vanilla_lookup_tables(void)
     return 0;
 }
 
+simd_byte_translation_table byte_table = {};
+
+static int test_byte_translation(void)
+{
+    u8_64 in;
+
+    if (randomize_data(&in, sizeof(in))) {
+        return -1;
+    }
+
+    unsigned i;
+
+    for (i = 0; i < 256; i++) {
+        byte_table.u8[i] = ~i & 0xFF;
+    }
+
+    const u8_64 out = translate_bytes_x64(in, &byte_table);
+    const __mmask64 err = VEC_TO_MASK(out != ~in);
+
+    if (err) {
+        printf(OUT_PREFIX "Unexpected byte translation results at %s:%d\n",
+               __FILE__, __LINE__);
+        printf(OUT_PREFIX);
+        debug_print_vec(in, err);
+        printf(OUT_PREFIX);
+        debug_print_vec(out, err);
+        return -1;
+    }
+
+    return 0;
+}
+
+/*
+ * XXX: This doesn't completely cover the scatter/gather to/from struct macros that wrap the
+ * generation of those instructions but since they're largely cookie cutter macros so long as
+ * a representative sample of lane width vs. lane count is tested that's probably OK.  This
+ * function also doesn't test the pathological case where the stores of two lanes in the same
+ * scatter overlap (both happen, the higher lane index is serialized later and "wins", but this
+ * is a slow path case that one generally avoids like the plague anyway).
+ *
+ * It does, however, test having a disabled lane in the mask (lane 5) which is disabled for
+ * both the scatter and gather.
+ */
+static int test_struct_scatter_gather(void)
+{
+    u64_8 inc_baz = IDX_VEC(u64_8);
+    u32_8 inc_foo = -IDX_VEC(u32_8);
+    u32_4 inc_bar = IDX_VEC(u32_4);
+
+    foo_struct_t test_a[8];
+    foo_struct_t test_b[8];
+    mpv_8 p;
+
+    randomize_data(test_a, sizeof(test_a));
+    unsigned i;
+
+    for (i = 0; i < 8; i++) {
+        p.mp[i].p = test_a + i;
+        test_b[i] = test_a[i];
+
+        if (i == 5) {
+            p.mp[i].inv = 1;
+        } else {
+            test_b[i].baz64 += inc_baz[i];
+            test_b[i].foo32 += inc_foo[i];
+        }
+
+        if (i < 4) {
+            test_b[i].bar32 += inc_bar[i];
+        }
+    }
+
+    u64_8 tmp_baz = GATHER_u64_8_FROM_STRUCTS(foo_struct_t, baz64, p) + inc_baz;
+    u32_8 tmp_foo = GATHER_u32_8_FROM_STRUCTS(foo_struct_t, foo32, p) + inc_foo;
+    u32_4 tmp_bar = GATHER_u32_4_FROM_STRUCTS(foo_struct_t, bar32, p.v4[0]) + inc_bar;
+    SCATTER_u64_8_TO_STRUCTS(foo_struct_t, baz64, p, tmp_baz);
+    SCATTER_u32_8_TO_STRUCTS(foo_struct_t, foo32, p, tmp_foo);
+    SCATTER_u32_4_TO_STRUCTS(foo_struct_t, bar32, p.v4[0], tmp_bar);
+
+    if (memcmp(test_a, test_b, sizeof(test_a))) {
+        printf(OUT_PREFIX OUT_PREFIX "Failed comparison in %s.\n", __FUNCTION__);
+        return -1;
+    }
+
+    return 0;
+}
+
 int main(int argc, char **argv)
 {
 
@@ -221,6 +308,16 @@ int main(int argc, char **argv)
     }
 
     if (test_vanilla_lookup_tables()) {
+        printf(OUT_PREFIX "%s FAIL\n", __FILE__);
+        return -1;
+    }
+
+    if (test_byte_translation()) {
+        printf(OUT_PREFIX "%s FAIL\n", __FILE__);
+        return -1;
+    }
+
+    if (test_struct_scatter_gather()) {
         printf(OUT_PREFIX "%s FAIL\n", __FILE__);
         return -1;
     }
