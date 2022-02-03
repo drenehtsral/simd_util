@@ -4,6 +4,8 @@ Utility headers, macros, and functions for non-traditional SIMD use cases (thing
 
 ## About This Repository
 
+There is no warranty!  This code almost certainly has bugs in it because I have not really had the free time to work on it nor a compelling use case / application (which in my experience tends to do a better job finding and working the kinks out than any amount of toy test cases).  So YMMV, be warned.
+
 ### Supported Targets
 Currently this only targets x86_64 CPUs supporting (at least) `AVX-512F`/`BW`/`DQ`/`VL`/`CD`. This includes (at present):
 
