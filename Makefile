@@ -1,5 +1,5 @@
 
-.PHONY: test clean style flush_turds base show_sde_cmd
+.PHONY: test test_sde clean style flush_turds base show_sde_cmd
 
 TARGET ?= icl
 
@@ -59,14 +59,27 @@ base_objs = src/base_util.o
 
 base: $(base_objs)
 
-.ONESHELL: test
-test: $(base_objs) $(test_srcs)
+.ONESHELL: test_sde
+test_sde: $(base_objs) $(test_srcs)
 	@echo "Starting tests using \"$(SDE_CMD)\" to run tests:"
 	@rm -f test/a.out
 	@set -e pipefail
 	@for f in $(filter-out $(base_objs),$^); do
 	@    $(CC) $(CFLAGS) -o test/a.out $(base_objs) $$f || exit $$?
 	@    $(SDE_CMD) test/a.out $(TEST_ARGS) || exit $$?
+	@    rm -f test/a.out;
+	@done
+	@echo "All tests PASS."
+
+
+.ONESHELL: test
+test: $(base_objs) $(test_srcs)
+	@echo "Starting tests natively (no emulation via sde64):"
+	@rm -f test/a.out
+	@set -e pipefail
+	@for f in $(filter-out $(base_objs),$^); do
+	@    $(CC) $(CFLAGS) -o test/a.out $(base_objs) $$f || exit $$?
+	@    test/a.out $(TEST_ARGS) || exit $$?
 	@    rm -f test/a.out;
 	@done
 	@echo "All tests PASS."
